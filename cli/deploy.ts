@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { execSync } from "child_process";
+import { execSync, spawn } from "child_process";
 import { Command } from "commander";
 import inquirer from "inquirer";
 import kleur = require("kleur");
@@ -11,7 +11,7 @@ import { askSourceQuestions } from "./configQuestions/sourceQuestions";
 import { askDestinationQuestions } from "./configQuestions/destinationQuestions";
 import { askEmbeddingQuestions } from "./configQuestions/embeddingQuestions";
 import { askChunkQuestions } from "./configQuestions/chunkQuestions";
-import { askAWSQuestions } from "./configQuestions/awsQuestions";
+import { envType } from "./configQuestions/envType";
 
 // Read and display the logo
 
@@ -36,9 +36,7 @@ program
   .description("Deploy the CDK stack with specified options.")
   .action(async () => {
     displayWelcome();
-    const awsKeys = await askAWSQuestions();
-    let envObject = { ...awsKeys };
-
+    let envObject = {} as envType;
     const source = await askSourceQuestions(envObject);
     const destination = await askDestinationQuestions(envObject);
     const embedding = await askEmbeddingQuestions(envObject);
@@ -54,12 +52,13 @@ program
     console.log("Deploying with the following options:");
     console.log(fullConfig);
 
-    writeEnvFile(envObject);
-
     const stackMapping: { [key: string]: string } = {
       "S3:Pinecone": "S3PineconeCDKStack",
       "S3:MongoDB": "S3MongoDBCDKStack",
       "S3:PostgreSQL": "S3PostgresCDKStack",
+      "Dropbox:Pinecone": "DropboxPineconeCDKStack",
+      "Dropbox:MongoDB": "DropboxMongoDBCDKStack",
+      "Dropbox:PostgreSQL": "DropboxPostgresCDKStack",
     };
 
     const stackKey = `${source.sourceConnector}:${destination.destinationConnector}`;
@@ -69,6 +68,9 @@ program
       console.error("No matching stack found for the selected options.");
       process.exit(1);
     }
+
+    envObject.stack_to_deploy = stackToDeploy;
+    writeEnvFile(envObject);
 
     // Execute the deployment command for the selected stack
     try {
@@ -100,6 +102,9 @@ program
           "S3PineconeCDKStack",
           "S3MongoDBCDKStack",
           "S3PostgresCDKStack",
+          "DropboxPineconeCDKStack",
+          "DropboxMongoDBCDKStack",
+          "DropboxPostgresCDKStack",
           new inquirer.Separator(),
           "Cancel",
         ],
@@ -122,10 +127,36 @@ program
     }
   });
 
+program
+  .command("dropbox-oauth")
+  .description("Run the Dropbox OAuth flow to generate a refresh token.")
+  .action(() => {
+    console.log(kleur.green("Starting Dropbox OAuth process..."));
+
+    const command = `source ../python-dropbox-oauth/venv/bin/activate && python3 ../python-dropbox-oauth/oauth.py`;
+
+    const pythonProcess = spawn(command, {
+      stdio: "inherit", // Use "inherit" to allow Python to interact with the terminal directly
+      shell: true,
+    });
+
+    pythonProcess.on("close", (code) => {
+      if (code === 0) {
+        console.log(
+          kleur.yellow(
+            "OAuth process completed successfully. To proceed with deployment, please run 'npm run splinter deploy', select Dropbox as the source, and enter the generated refresh token when prompted."
+          )
+        );
+      } else {
+        console.error(kleur.red(`OAuth process exited with code ${code}`));
+      }
+    });
+  });
+
 program.parse(process.argv);
 
 // Helper function to write answers to .env file
-function writeEnvFile(envObject: Record<string, string>) {
+function writeEnvFile(envObject: envType) {
   const envFilePath = path.resolve(process.cwd(), ".env");
   const envData = Object.entries(envObject)
     .map(([key, value]) => `${key.toUpperCase()}=${value}`)

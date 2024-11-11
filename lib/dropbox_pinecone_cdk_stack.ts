@@ -153,14 +153,16 @@ export class Dropbox_Pinecone_CDK_Stack extends cdk.Stack {
       environment: {
         JOB_QUEUE: jobQueue.ref,
         JOB_DEFINITION: jobDefinition.ref,
-        DROPBOX_ACCESS_TOKEN: process.env.DROPBOX_ACCESS_TOKEN!,
         DROPBOX_REFRESH_TOKEN: process.env.DROPBOX_REFRESH_TOKEN!,
         DROPBOX_APP_KEY: process.env.DROPBOX_APP_KEY!,
         DROPBOX_APP_SECRET: process.env.DROPBOX_APP_SECRET!,
         DROPBOX_REMOTE_URL: process.env.DROPBOX_REMOTE_URL!,
         PINECONE_API_KEY: process.env.PINECONE_API_KEY!,
-        EMBEDDING_MODEL_NAME: process.env.EMBEDDING_MODEL_NAME!,
         PINECONE_INDEX_NAME: process.env.PINECONE_INDEX_NAME!,
+        EMBEDDING_MODEL_NAME: process.env.EMBEDDING_MODEL_NAME!,
+        EMBEDDING_PROVIDER: process.env.EMBEDDING_PROVIDER!,
+        EMBEDDING_PROVIDER_API_KEY:
+          process.env.EMBEDDING_PROVIDER_API_KEY || "",
         DYNAMODB_TABLE_NAME: tokenTable.tableName,
       },
       timeout: cdk.Duration.seconds(30),
@@ -234,20 +236,20 @@ export class Dropbox_Pinecone_CDK_Stack extends cdk.Stack {
       api,
     });
 
-    // // Create a custom resource to invoke the Lambda function after deployment
-    // const provider = new custom_resources.Provider(this, "Provider", {
-    //   onEventHandler: webhookLambda, // Pass your existing Lambda function here
-    // });
+    // Create a custom resource to invoke the Lambda function after deployment
+    const provider = new custom_resources.Provider(this, "Provider", {
+      onEventHandler: webhookLambda, // Pass your existing Lambda function here
+    });
 
-    // // Trigger the Lambda for initial S3 bucket processing
-    // const customResource = new cdk.CustomResource(
-    //   this,
-    //   "InvokeLambdaAfterDeploy",
-    //   {
-    //     serviceToken: provider.serviceToken,
-    //   }
-    // );
+    // Trigger the Lambda for initial dropbox processing
+    const customResource = new cdk.CustomResource(
+      this,
+      "InvokeLambdaAfterDeploy",
+      {
+        serviceToken: provider.serviceToken,
+      }
+    );
 
-    // customResource.node.addDependency(bucket);
+    customResource.node.addDependency(api);
   }
 }

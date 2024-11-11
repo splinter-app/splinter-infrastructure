@@ -24,14 +24,15 @@ if __name__ == "__main__":
             partition_by_api=False,
         ),
         chunker_config=ChunkerConfig(
-            chunking_strategy="basic",
-            chunk_max_characters=1000,
+            chunking_strategy=os.getenv("CHUNKING_STRATEGY"),
+            chunk_max_characters=os.getenv("CHUNKING_MAX_CHARACTERS"),
             chunk_overlap=20
         ),
 
         embedder_config=EmbedderConfig(
-            embedding_provider="huggingface",
+            embedding_provider=os.getenv("EMBEDDING_MODEL_NAME"),
             embedding_model_name=os.getenv("EMBEDDING_MODEL_NAME"),
+            embedding_api_key=os.getenv("EMBEDDING_PROVIDER_API_KEY"),
         ),
         destination_connection_config=PineconeConnectionConfig(
             access_config=PineconeAccessConfig(

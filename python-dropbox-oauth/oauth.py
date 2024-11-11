@@ -23,6 +23,5 @@ with dropbox.Dropbox(oauth2_access_token=oauth_result.access_token) as dbx:
     print("----------------------------------------")
     print("Successfully set up client!")
     print("----------------------------------------")
-    print("DROPBOX_ACCESS_TOKEN:", oauth_result.access_token)
-    print("----------------------------------------")
     print("DROPBOX_REFRESH_TOKEN:", oauth_result.refresh_token)
+    print("----------------------------------------")

@@ -85,8 +85,10 @@ def add_files(access_token):
     dropbox_access_token = access_token
     dropbox_remote_url = os.environ['DROPBOX_REMOTE_URL']
     pinecone_api_key = os.environ['PINECONE_API_KEY']
-    embedding_model_name = os.environ['EMBEDDING_MODEL_NAME']
     pinecone_index_name = os.environ['PINECONE_INDEX_NAME']
+    embedding_model_name = os.environ['EMBEDDING_MODEL_NAME']
+    embedding_provider = os.environ['EMBEDDING_PROVIDER']
+    embedding_provider_api_key = os.environ['EMBEDDING_PROVIDER_API_KEY']
     local_file_download_dir = '/tmp/'  # Temporary directory for Lambda file storage
 
     # Generate a valid job name
@@ -101,9 +103,11 @@ def add_files(access_token):
             'environment': [
                 {'name': 'DROPBOX_ACCESS_TOKEN', 'value': dropbox_access_token},
                 {'name': 'DROPBOX_REMOTE_URL', 'value': dropbox_remote_url},
-                {'name': 'PINECONE_API_KEY', 'value': pinecone_api_key},
                 {'name': 'EMBEDDING_MODEL_NAME', 'value': embedding_model_name},
+                {'name': 'EMBEDDING_PROVIDER', 'value': embedding_provider},
+                {'name': 'EMBEDDING_PROVIDER_API_KEY', 'value': embedding_provider_api_key},
                 {'name': 'PINECONE_INDEX_NAME', 'value': pinecone_index_name},
+                {'name': 'PINECONE_API_KEY', 'value': pinecone_api_key},
                 {'name': 'LOCAL_FILE_DOWNLOAD_DIR', 'value': local_file_download_dir},
                 {'name': 'APP_SCRIPT', 'value': app_script},
             ],

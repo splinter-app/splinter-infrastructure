@@ -34,7 +34,9 @@ if __name__ == "__main__":
             partition_by_api=False,
             strategy="auto",
         ),
-        chunker_config=ChunkerConfig(chunking_strategy="by_title"),
+        chunker_config=ChunkerConfig(
+            chunking_strategy=os.getenv("CHUNKING_STRATEGY"),
+            chunk_max_characters=os.getenv("CHUNKING_MAX_CHARACTERS")),
         embedder_config=EmbedderConfig(
             embedding_provider=os.getenv("EMBEDDING_PROVIDER"),
             embedding_model_name=os.getenv("EMBEDDING_MODEL_NAME"),

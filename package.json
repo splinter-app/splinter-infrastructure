@@ -34,6 +34,7 @@
     "commander": "^12.1.0",
     "constructs": "^10.0.0",
     "dotenv": "^16.4.5",
+    "fs": "^0.0.1-security",
     "inquirer": "^12.0.1",
     "kleur": "^4.1.5",
     "source-map-support": "^0.5.21"

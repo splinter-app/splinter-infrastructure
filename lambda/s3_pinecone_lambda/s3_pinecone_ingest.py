@@ -26,8 +26,8 @@ if __name__ == "__main__":
             partition_by_api=False,
         ),
         chunker_config=ChunkerConfig(
-            chunking_strategy="basic",
-            chunk_max_characters=500,
+            chunking_strategy=os.getenv("CHUNKING_STRATEGY"),
+            chunk_max_characters=os.getenv("CHUNKING_MAX_CHARACTERS"),
             chunk_overlap=20
         ),
         embedder_config=EmbedderConfig(
