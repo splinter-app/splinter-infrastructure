@@ -1,6 +1,7 @@
 # lambda/s3_pinecone_lambda/delete_lambda_function.py
 import json
 import os
+import urllib.parse
 import boto3
 from pinecone_utils import delete_from_pinecone
 import time
@@ -46,7 +47,10 @@ def lambda_handler(event, context):
         log_to_cloudwatch(message)
 
         try:
-            delete_from_pinecone(filename, api_key, index_name)
+            decoded_filename = urllib.parse.unquote(filename)
+            decoded_filename_with_spaces = decoded_filename.replace('+', ' ').replace('%20', ' ')
+            delete_from_pinecone(decoded_filename_with_spaces, api_key, index_name)
+            print(f"Deleted File: {decoded_filename_with_spaces} from Bucket: {s3_bucket}")
         except Exception as e:
             message = f"Error deleting from Pinecone: {e}"
             print(message)

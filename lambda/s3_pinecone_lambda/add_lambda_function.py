@@ -4,6 +4,7 @@ import os
 import boto3
 import botocore
 import uuid
+import urllib.parse
 import time
 from pinecone_utils import delete_from_pinecone
 
@@ -61,9 +62,11 @@ def lambda_handler(event, context):
         bucket_name = event['Records'][0]['s3']['bucket']['name']
         document_key = event['Records'][0]['s3']['object']['key']
         
-        s3_url = f"s3://{bucket_name}/{document_key}"
+        decoded_document_key = urllib.parse.unquote(document_key)
+        decoded_document_with_spaces = decoded_document_key.replace('+', ' ').replace('%20', ' ')
+        s3_url = f"s3://{bucket_name}/{decoded_document_with_spaces}"
 
-        if does_object_exist(bucket_name, document_key):
+        if does_object_exist(bucket_name, decoded_document_with_spaces):
             message = f"Object {document_key} already exists. Deleting vectors from database."
             print(message)
             log_to_cloudwatch(message)
@@ -71,7 +74,7 @@ def lambda_handler(event, context):
             api_key = os.environ['PINECONE_API_KEY']
             index_name = os.environ['PINECONE_INDEX_NAME']
             try:
-                delete_from_pinecone(os.path.basename(document_key), api_key, index_name)
+                delete_from_pinecone(os.path.basename(decoded_document_with_spaces), api_key, index_name)
             except Exception as e:
                 error_message = f"Error deleting from Pinecone: {e}"
                 print(error_message)
