@@ -8,6 +8,8 @@ import * as ec2 from "aws-cdk-lib/aws-ec2";
 import * as iam from "aws-cdk-lib/aws-iam";
 import * as logs from "aws-cdk-lib/aws-logs";
 import * as custom_resources from "aws-cdk-lib/custom-resources";
+
+import * as apigateway from "aws-cdk-lib/aws-apigateway";
 import * as dotenv from "dotenv";
 import { Construct } from "constructs";
 
@@ -20,6 +22,9 @@ const CONTAINER_MEMORY = "4096";
 export class S3_Pinecone_CDK_Stack extends Stack {
   constructor(scope: Construct, id: string, props?: StackProps) {
     super(scope, id, props);
+
+    // Defining log groups for Rag Sandbox API Gateway
+    const logGroup = new logs.LogGroup(this, "ApiGatewayAccessLogs");
 
     // Define the S3 bucket (or reference an existing one)
     const bucket = s3.Bucket.fromBucketName(
@@ -147,11 +152,12 @@ export class S3_Pinecone_CDK_Stack extends Stack {
         MY_AWS_SECRET_ACCESS_KEY: process.env.MY_AWS_SECRET_ACCESS_KEY!,
         EMBEDDING_PROVIDER: process.env.EMBEDDING_PROVIDER!,
         EMBEDDING_MODEL_NAME: process.env.EMBEDDING_MODEL_NAME!,
-        EMBEDDING_PROVIDER_API_KEY: process.env.EMBEDDING_PROVIDER_API_KEY || '',
+        EMBEDDING_PROVIDER_API_KEY:
+          process.env.EMBEDDING_PROVIDER_API_KEY || "",
         PINECONE_API_KEY: process.env.PINECONE_API_KEY!,
         PINECONE_INDEX_NAME: process.env.PINECONE_INDEX_NAME!,
         S3_BUCKET_NAME: process.env.S3_BUCKET_NAME!,
-        S3_NOTIFICATION_PREFIX: process.env.S3_NOTIFICATION_PREFIX || '',
+        S3_NOTIFICATION_PREFIX: process.env.S3_NOTIFICATION_PREFIX || "",
       },
       timeout: cdk.Duration.seconds(30),
     });
@@ -193,6 +199,33 @@ export class S3_Pinecone_CDK_Stack extends Stack {
       })
     );
 
+    const requestsLayer = new lambda.LayerVersion(this, "RequestsLayer", {
+      code: lambda.Code.fromAsset(
+        "lambda/prompt_lambda/lambda_layer/openai_pinecone_layer.zip"
+      ),
+      compatibleRuntimes: [lambda.Runtime.PYTHON_3_10],
+    });
+
+    // Define the Lambda function for handling OpenAI requests
+    const promptLambda = new lambda.Function(this, "PromptLambdaFunction", {
+      runtime: lambda.Runtime.PYTHON_3_10,
+      code: lambda.Code.fromAsset("lambda/prompt_lambda"),
+      handler: "prompt_handler.lambda_handler",
+      layers: [requestsLayer],
+      environment: {
+        OPENAI_API_KEY: process.env.EMBEDDING_PROVIDER_API_KEY!,
+        PINECONE_API_KEY: process.env.PINECONE_API_KEY!,
+        PINECONE_INDEX_NAME: process.env.PINECONE_INDEX_NAME!,
+        EMBEDDING_MODEL_NAME: process.env.EMBEDDING_MODEL_NAME!,
+      },
+      timeout: cdk.Duration.seconds(30),
+    });
+
+    // Grant API Gateway permissions to invoke the Lambda function
+    promptLambda.addPermission("APIGatewayInvokeLambda", {
+      principal: new iam.ServicePrincipal("apigateway.amazonaws.com"),
+    });
+
     // Grant necessary permissions to access S3 for the delete Lambda
     bucket.grantRead(deleteLambda);
 
@@ -233,6 +266,43 @@ export class S3_Pinecone_CDK_Stack extends Stack {
         new s3_notifications.LambdaDestination(deleteLambda)
       );
     }
+
+    // API Gateway to expose the RAG Sandobx Lambda function
+    const api = new apigateway.RestApi(this, "SandboxApi", {
+      restApiName: "Sandbox Service",
+      description:
+        "API Gateway with POST endpoint for embedding and querying OpenAI.",
+      deployOptions: {
+        accessLogDestination: new apigateway.LogGroupLogDestination(logGroup),
+        accessLogFormat: apigateway.AccessLogFormat.jsonWithStandardFields(),
+      },
+      defaultCorsPreflightOptions: {
+        allowOrigins: apigateway.Cors.ALL_ORIGINS, // or specify an array of allowed origins
+        allowMethods: apigateway.Cors.ALL_METHODS, // or specify methods like ['GET', 'POST']
+      },
+    });
+
+    // Define the /sandbox resource and POST method
+    const sandbox = api.root.addResource("sandbox");
+    const promptResource = sandbox.addResource("prompt");
+
+    // Integrate the prompt Lambda with the POST method on the /sandbox/prompt route
+    promptResource.addMethod(
+      "POST",
+      new apigateway.LambdaIntegration(promptLambda, {
+        requestTemplates: {
+          "application/json": `{
+            "statusCode": 200
+        }`,
+        },
+      })
+    );
+
+    // Output the API endpoint URL
+    new cdk.CfnOutput(this, "SandboxApiUrl", {
+      value: api.url,
+      exportName: "SandboxApiUrl",
+    });
 
     // Create a custom resource to invoke the Lambda function after deployment
     const provider = new custom_resources.Provider(this, "Provider", {

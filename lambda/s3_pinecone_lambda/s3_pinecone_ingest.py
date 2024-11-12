@@ -25,11 +25,6 @@ if __name__ == "__main__":
         partitioner_config=PartitionerConfig(
             partition_by_api=False,
         ),
-        chunker_config=ChunkerConfig(
-            chunking_strategy=os.getenv("CHUNKING_STRATEGY"),
-            chunk_max_characters=os.getenv("CHUNKING_MAX_CHARACTERS"),
-            chunk_overlap=20
-        ),
         embedder_config=EmbedderConfig(
             embedding_provider=os.getenv("EMBEDDING_PROVIDER"),
             embedding_model_name=os.getenv("EMBEDDING_MODEL_NAME"),
