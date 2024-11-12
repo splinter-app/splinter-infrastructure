@@ -102,6 +102,8 @@ def add_files(s3_url):
     embedding_provider = os.environ['EMBEDDING_PROVIDER']
     embedding_model_name = os.environ['EMBEDDING_MODEL_NAME']
     embedding_provider_api_key = os.environ['EMBEDDING_PROVIDER_API_KEY']
+    chunking_strategy = os.environ['CHUNKING_STRATEGY']
+    chunking_max_characters = os.environ['CHUNKING_MAX_CHARACTERS']
     local_file_download_dir = '/tmp/'  # Temporary directory for Lambda file storage
 
     # Generate a valid job name
@@ -126,6 +128,8 @@ def add_files(s3_url):
                 {'name': 'EMBEDDING_PROVIDER', 'value': embedding_provider},
                 {'name': 'EMBEDDING_MODEL_NAME', 'value': embedding_model_name},
                 {'name': 'EMBEDDING_PROVIDER_API_KEY', 'value': embedding_provider_api_key},
+                {'name': 'CHUNKING_STRATEGY', 'value': chunking_strategy},
+                {'name': 'CHUNKING_MAX_CHARACTERS', 'value': chunking_max_characters},
                 {'name': 'LOCAL_FILE_DOWNLOAD_DIR', 'value': local_file_download_dir},
                 {'name': 'APP_SCRIPT', 'value': app_script},
             ],

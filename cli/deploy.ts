@@ -52,6 +52,9 @@ program
     console.log("Deploying with the following options:");
     console.log(fullConfig);
 
+    const sourceDestinationEmbedding = `${source.sourceConnector}|${destination.destinationConnector}|${embedding.embeddingProvider}`;
+    Object.assign(envObject, { SOURCE_DESTINATION_EMBEDDING: sourceDestinationEmbedding });
+
     const stackMapping: { [key: string]: string } = {
       "S3:Pinecone": "S3PineconeCDKStack",
       "S3:MongoDB": "S3MongoDBCDKStack",

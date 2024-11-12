@@ -27,7 +27,7 @@ if __name__ == "__main__":
         ),
         chunker_config=ChunkerConfig(
             chunking_strategy=os.getenv("CHUNKING_STRATEGY"),
-            chunk_max_characters=os.getenv("CHUNKING_MAX_CHARACTERS"),
+            chunk_max_characters=int(os.getenv("CHUNKING_MAX_CHARACTERS")),
             chunk_overlap=20
         ),
         embedder_config=EmbedderConfig(
