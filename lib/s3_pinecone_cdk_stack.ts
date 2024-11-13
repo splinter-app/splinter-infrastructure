@@ -392,6 +392,8 @@ export class S3_Pinecone_CDK_Stack extends Stack {
         EMBEDDING_PROVIDER_API_KEY:
           process.env.EMBEDDING_PROVIDER_API_KEY || "",
         PINECONE_API_KEY: process.env.PINECONE_API_KEY!,
+        CHUNKING_STRATEGY: process.env.CHUNKING_STRATEGY!,
+        CHUNKING_MAX_CHARACTERS: process.env.CHUNKING_MAX_CHARACTERS!,
         PINECONE_INDEX_NAME: process.env.PINECONE_INDEX_NAME!,
         S3_BUCKET_NAME: process.env.S3_BUCKET_NAME!,
         S3_NOTIFICATION_PREFIX: process.env.S3_NOTIFICATION_PREFIX || "",
