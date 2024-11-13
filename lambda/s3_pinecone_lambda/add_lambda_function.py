@@ -145,8 +145,8 @@ def add_files(s3_url):
     embedding_provider = os.environ['EMBEDDING_PROVIDER']
     embedding_model_name = os.environ['EMBEDDING_MODEL_NAME']
     embedding_provider_api_key = os.environ['EMBEDDING_PROVIDER_API_KEY']
-    chunking_strategy = chunking_strategy = os.getenv('CHUNKING_STRATEGY', '')
-    chunking_max_characters = chunking_strategy = os.getenv('CHUNKING_MAX_CHARACTERS', '')
+    chunking_strategy = os.getenv('CHUNKING_STRATEGY', '')
+    chunking_max_characters = os.getenv('CHUNKING_MAX_CHARACTERS', '')
     pinecone_api_key = os.environ['PINECONE_API_KEY']
     pinecone_index_name = os.environ['PINECONE_INDEX_NAME']
     local_file_download_dir = '/tmp/'  # Temporary directory for Lambda file storage
