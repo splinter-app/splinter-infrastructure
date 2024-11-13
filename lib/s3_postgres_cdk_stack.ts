@@ -147,7 +147,8 @@ export class S3_Postgres_CDK_Stack extends Stack {
         MY_AWS_SECRET_ACCESS_KEY: process.env.MY_AWS_SECRET_ACCESS_KEY!,
         EMBEDDING_PROVIDER: process.env.EMBEDDING_PROVIDER!,
         EMBEDDING_MODEL_NAME: process.env.EMBEDDING_MODEL_NAME!,
-        EMBEDDING_PROVIDER_API_KEY: process.env.EMBEDDING_PROVIDER_API_KEY || '',
+        EMBEDDING_PROVIDER_API_KEY:
+          process.env.EMBEDDING_PROVIDER_API_KEY || "",
         CHUNKING_STRATEGY: process.env.CHUNKING_STRATEGY!,
         CHUNKING_MAX_CHARACTERS: process.env.CHUNKING_MAX_CHARACTERS!,
         POSTGRES_DB_NAME: process.env.POSTGRES_DB_NAME!,
@@ -157,7 +158,7 @@ export class S3_Postgres_CDK_Stack extends Stack {
         POSTGRES_PORT: process.env.POSTGRES_PORT!,
         POSTGRES_TABLE_NAME: process.env.POSTGRES_TABLE_NAME!,
         S3_BUCKET_NAME: process.env.S3_BUCKET_NAME!,
-        S3_NOTIFICATION_PREFIX: process.env.S3_NOTIFICATION_PREFIX || '',
+        S3_NOTIFICATION_PREFIX: process.env.S3_NOTIFICATION_PREFIX || "",
       },
       timeout: cdk.Duration.seconds(30),
     });
@@ -244,20 +245,22 @@ export class S3_Postgres_CDK_Stack extends Stack {
       );
     }
 
-    // Create a custom resource to invoke the Lambda function after deployment
-    const provider = new custom_resources.Provider(this, "Provider", {
-      onEventHandler: addLambda, // Pass your existing Lambda function here
-    });
+    if (process.env.INITIAL_INGESTION === "true") {
+      // Create a custom resource to invoke the Lambda function after deployment
+      const provider = new custom_resources.Provider(this, "Provider", {
+        onEventHandler: addLambda, // Pass your existing Lambda function here
+      });
 
-    // Trigger the Lambda for initial S3 bucket processing
-    const customResource = new cdk.CustomResource(
-      this,
-      "InvokeLambdaAfterDeploy",
-      {
-        serviceToken: provider.serviceToken,
-      }
-    );
+      // Trigger the Lambda for initial S3 bucket processing
+      const customResource = new cdk.CustomResource(
+        this,
+        "InvokeLambdaAfterDeploy",
+        {
+          serviceToken: provider.serviceToken,
+        }
+      );
 
-    customResource.node.addDependency(bucket);
+      customResource.node.addDependency(bucket);
+    }
   }
 }

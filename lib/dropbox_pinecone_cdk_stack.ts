@@ -159,6 +159,8 @@ export class Dropbox_Pinecone_CDK_Stack extends cdk.Stack {
         DROPBOX_REMOTE_URL: process.env.DROPBOX_REMOTE_URL!,
         PINECONE_API_KEY: process.env.PINECONE_API_KEY!,
         PINECONE_INDEX_NAME: process.env.PINECONE_INDEX_NAME!,
+        CHUNKING_STRATEGY: process.env.CHUNKING_STRATEGY!,
+        CHUNKING_MAX_CHARACTERS: process.env.CHUNKING_MAX_CHARACTERS!,
         EMBEDDING_MODEL_NAME: process.env.EMBEDDING_MODEL_NAME!,
         EMBEDDING_PROVIDER: process.env.EMBEDDING_PROVIDER!,
         EMBEDDING_PROVIDER_API_KEY:
@@ -236,20 +238,22 @@ export class Dropbox_Pinecone_CDK_Stack extends cdk.Stack {
       api,
     });
 
-    // Create a custom resource to invoke the Lambda function after deployment
-    const provider = new custom_resources.Provider(this, "Provider", {
-      onEventHandler: webhookLambda, // Pass your existing Lambda function here
-    });
+    if (process.env.INITIAL_INGESTION === "true") {
+      // Create a custom resource to invoke the Lambda function after deployment
+      const provider = new custom_resources.Provider(this, "Provider", {
+        onEventHandler: webhookLambda, // Pass your existing Lambda function here
+      });
 
-    // Trigger the Lambda for initial dropbox processing
-    const customResource = new cdk.CustomResource(
-      this,
-      "InvokeLambdaAfterDeploy",
-      {
-        serviceToken: provider.serviceToken,
-      }
-    );
+      // Trigger the Lambda for initial dropbox processing
+      const customResource = new cdk.CustomResource(
+        this,
+        "InvokeLambdaAfterDeploy",
+        {
+          serviceToken: provider.serviceToken,
+        }
+      );
 
-    customResource.node.addDependency(api);
+      customResource.node.addDependency(api);
+    }
   }
 }
