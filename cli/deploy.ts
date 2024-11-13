@@ -12,6 +12,7 @@ import { askDestinationQuestions } from "./configQuestions/destinationQuestions"
 import { askEmbeddingQuestions } from "./configQuestions/embeddingQuestions";
 import { askChunkQuestions } from "./configQuestions/chunkQuestions";
 import { envType } from "./configQuestions/envType";
+import { askInitialIngestion } from "./configQuestions/initialIngestionQuestions";
 
 // Read and display the logo
 
@@ -20,6 +21,18 @@ function displayWelcome() {
   const logo = fs.readFileSync(logoPath, "utf8");
   console.log(kleur.red().bold(logo));
   console.log(kleur.green("Welcome to the Splinter Deploy CLI!"));
+  console.log(
+    kleur
+      .yellow()
+      .bold(
+        "**IMPORTANT**: Before proceeding, please ensure you're logged in to your AWS account."
+      )
+  );
+  console.log(
+    kleur.yellow(
+      "You can log in through the AWS website or authenticate via the AWS CLI to access your resources."
+    )
+  );
 }
 
 const program = new Command();
@@ -40,20 +53,35 @@ program
     const source = await askSourceQuestions(envObject);
     const destination = await askDestinationQuestions(envObject);
     const embedding = await askEmbeddingQuestions(envObject);
-    const chunkSettings = await askChunkQuestions(envObject);
+
+    let chunkSettings = {};
+    if (embedding.embeddingProvider !== "OpenAI") {
+      chunkSettings = await askChunkQuestions(envObject);
+    } else {
+      console.log(
+        kleur.yellow(
+          "OpenAI detected: Chunking strategies will be set automatically. Proceeding with the deployment process..."
+        )
+      );
+    }
+
+    const initialIngestion = await askInitialIngestion(envObject);
 
     const fullConfig = {
       ...source,
       ...destination,
       ...embedding,
       ...chunkSettings,
+      ...initialIngestion,
     };
 
     console.log("Deploying with the following options:");
     console.log(fullConfig);
 
     const sourceDestinationEmbedding = `${source.sourceConnector}|${destination.destinationConnector}|${embedding.embeddingProvider}`;
-    Object.assign(envObject, { SOURCE_DESTINATION_EMBEDDING: sourceDestinationEmbedding });
+    Object.assign(envObject, {
+      SOURCE_DESTINATION_EMBEDDING: sourceDestinationEmbedding,
+    });
 
     const stackMapping: { [key: string]: string } = {
       "S3:Pinecone": "S3PineconeCDKStack",

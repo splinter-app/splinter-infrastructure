@@ -163,6 +163,8 @@ export class Dropbox_Postgres_CDK_Stack extends cdk.Stack {
         POSTGRES_HOST: process.env.POSTGRES_HOST!,
         POSTGRES_PORT: process.env.POSTGRES_PORT!,
         POSTGRES_TABLE_NAME: process.env.POSTGRES_TABLE_NAME!,
+        CHUNKING_STRATEGY: process.env.CHUNKING_STRATEGY!,
+        CHUNKING_MAX_CHARACTERS: process.env.CHUNKING_MAX_CHARACTERS!,
         EMBEDDING_MODEL_NAME: process.env.EMBEDDING_MODEL_NAME!,
         EMBEDDING_PROVIDER: process.env.EMBEDDING_PROVIDER!,
         EMBEDDING_PROVIDER_API_KEY:
@@ -240,20 +242,22 @@ export class Dropbox_Postgres_CDK_Stack extends cdk.Stack {
       api,
     });
 
-    // Create a custom resource to invoke the Lambda function after deployment
-    const provider = new custom_resources.Provider(this, "Provider", {
-      onEventHandler: webhookLambda, // Pass your existing Lambda function here
-    });
+    if (process.env.INITIAL_INGESTION === "true") {
+      // Create a custom resource to invoke the Lambda function after deployment
+      const provider = new custom_resources.Provider(this, "Provider", {
+        onEventHandler: webhookLambda, // Pass your existing Lambda function here
+      });
 
-    // Trigger the Lambda for initial dropbox processing
-    const customResource = new cdk.CustomResource(
-      this,
-      "InvokeLambdaAfterDeploy",
-      {
-        serviceToken: provider.serviceToken,
-      }
-    );
+      // Trigger the Lambda for initial dropbox processing
+      const customResource = new cdk.CustomResource(
+        this,
+        "InvokeLambdaAfterDeploy",
+        {
+          serviceToken: provider.serviceToken,
+        }
+      );
 
-    customResource.node.addDependency(api);
+      customResource.node.addDependency(api);
+    }
   }
 }

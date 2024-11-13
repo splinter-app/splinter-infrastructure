@@ -87,6 +87,8 @@ def add_files(access_token):
     mongodb_uri = os.environ['MONGODB_URI']
     mongodb_database = os.environ['MONGODB_DATABASE']
     mongodb_collection = os.environ['MONGODB_COLLECTION']
+    chunking_strategy = os.environ['CHUNKING_STRATEGY']
+    chunking_max_characters = os.environ['CHUNKING_MAX_CHARACTERS']
     embedding_model_name = os.environ['EMBEDDING_MODEL_NAME']
     embedding_provider_api_key = os.environ['EMBEDDING_PROVIDER_API_KEY']
     embedding_provider = os.environ['EMBEDDING_PROVIDER']
@@ -107,6 +109,8 @@ def add_files(access_token):
                 {'name': 'EMBEDDING_PROVIDER', 'value': embedding_provider},
                 {'name': 'EMBEDDING_MODEL_NAME', 'value': embedding_model_name},
                 {'name': 'EMBEDDING_PROVIDER_API_KEY', 'value': embedding_provider_api_key},
+                {'name': 'CHUNKING_STRATEGY', 'value': chunking_strategy},
+                {'name': 'CHUNKING_MAX_CHARACTERS', 'value': chunking_max_characters},
                 {'name': 'MONGODB_URI', 'value': mongodb_uri},
                 {'name': 'MONGODB_DATABASE', 'value': mongodb_database},
                 {'name': 'MONGODB_COLLECTION', 'value': mongodb_collection},

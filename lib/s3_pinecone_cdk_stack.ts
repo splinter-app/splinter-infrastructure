@@ -544,20 +544,22 @@ export class S3_Pinecone_CDK_Stack extends Stack {
       exportName: "SandboxApiUrl",
     });
 
-    // Create a custom resource to invoke the Lambda function after deployment
-    const provider = new custom_resources.Provider(this, "Provider", {
-      onEventHandler: addLambda, // Pass your existing Lambda function here
-    });
+    if (process.env.INITIAL_INGESTION === "true") {
+      // Create a custom resource to invoke the Lambda function after deployment
+      const provider = new custom_resources.Provider(this, "Provider", {
+        onEventHandler: addLambda, // Pass your existing Lambda function here
+      });
 
-    // Trigger the Lambda for initial S3 bucket processing
-    const customResource = new cdk.CustomResource(
-      this,
-      "InvokeLambdaAfterDeploy",
-      {
-        serviceToken: provider.serviceToken,
-      }
-    );
+      // Trigger the Lambda for initial S3 bucket processing
+      const customResource = new cdk.CustomResource(
+        this,
+        "InvokeLambdaAfterDeploy",
+        {
+          serviceToken: provider.serviceToken,
+        }
+      );
 
-    customResource.node.addDependency(bucket);
+      customResource.node.addDependency(bucket);
+    }
   }
 }
