@@ -8,13 +8,15 @@ import * as ec2 from "aws-cdk-lib/aws-ec2";
 import * as iam from "aws-cdk-lib/aws-iam";
 import * as logs from "aws-cdk-lib/aws-logs";
 import * as custom_resources from "aws-cdk-lib/custom-resources";
+
+import * as apigateway from "aws-cdk-lib/aws-apigateway";
 import * as dotenv from "dotenv";
-import * as apigatewayv2 from 'aws-cdk-lib/aws-apigatewayv2';
-import * as apigatewayv2integrations from 'aws-cdk-lib/aws-apigatewayv2-integrations';
-import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
-import * as destinations from 'aws-cdk-lib/aws-logs-destinations';
-import * as events from 'aws-cdk-lib/aws-events';
-import * as targets from 'aws-cdk-lib/aws-events-targets';
+import * as apigatewayv2 from "aws-cdk-lib/aws-apigatewayv2";
+import * as apigatewayv2integrations from "aws-cdk-lib/aws-apigatewayv2-integrations";
+import * as dynamodb from "aws-cdk-lib/aws-dynamodb";
+import * as destinations from "aws-cdk-lib/aws-logs-destinations";
+import * as events from "aws-cdk-lib/aws-events";
+import * as targets from "aws-cdk-lib/aws-events-targets";
 import { Construct } from "constructs";
 
 dotenv.config();
@@ -62,22 +64,25 @@ export class S3_Pinecone_CDK_Stack extends Stack {
       })
     );
 
-    const connectionTable = new dynamodb.Table(this, 'ConnectionTable', {
-      partitionKey: { name: 'connectionId', type: dynamodb.AttributeType.STRING },
-      sortKey: { name: 'timestamp', type: dynamodb.AttributeType.NUMBER },
+    const connectionTable = new dynamodb.Table(this, "ConnectionTable", {
+      partitionKey: {
+        name: "connectionId",
+        type: dynamodb.AttributeType.STRING,
+      },
+      sortKey: { name: "timestamp", type: dynamodb.AttributeType.NUMBER },
       removalPolicy: cdk.RemovalPolicy.DESTROY,
     });
 
-    const clientDataTable = new dynamodb.Table(this, 'ClientDataTable', {
-      partitionKey: { name: 'clientId', type: dynamodb.AttributeType.STRING }, // Partition key by clientId
-      sortKey: { name: 'timestamp', type: dynamodb.AttributeType.NUMBER }, // Sort by timestamp
+    const clientDataTable = new dynamodb.Table(this, "ClientDataTable", {
+      partitionKey: { name: "clientId", type: dynamodb.AttributeType.STRING }, // Partition key by clientId
+      sortKey: { name: "timestamp", type: dynamodb.AttributeType.NUMBER }, // Sort by timestamp
       removalPolicy: cdk.RemovalPolicy.DESTROY,
     });
 
-    const connectLambda = new lambda.Function(this, 'ConnectLambda', {
+    const connectLambda = new lambda.Function(this, "ConnectLambda", {
       runtime: lambda.Runtime.PYTHON_3_9,
-      handler: 'connect_lambda.lambda_handler',
-      code: lambda.Code.fromAsset('lambda/websocket_utils_lambda'),
+      handler: "connect_lambda.lambda_handler",
+      code: lambda.Code.fromAsset("lambda/websocket_utils_lambda"),
       environment: {
         CONNECTION_TABLE_NAME: connectionTable.tableName,
       },
@@ -86,10 +91,10 @@ export class S3_Pinecone_CDK_Stack extends Stack {
 
     connectionTable.grantReadWriteData(connectLambda);
 
-    const disconnectLambda = new lambda.Function(this, 'DisconnectLambda', {
+    const disconnectLambda = new lambda.Function(this, "DisconnectLambda", {
       runtime: lambda.Runtime.PYTHON_3_9,
-      handler: 'disconnect_lambda.lambda_handler',
-      code: lambda.Code.fromAsset('lambda/websocket_utils_lambda'),
+      handler: "disconnect_lambda.lambda_handler",
+      code: lambda.Code.fromAsset("lambda/websocket_utils_lambda"),
       environment: {
         CONNECTION_TABLE_NAME: connectionTable.tableName,
       },
@@ -98,10 +103,10 @@ export class S3_Pinecone_CDK_Stack extends Stack {
 
     connectionTable.grantReadWriteData(disconnectLambda);
 
-    const initialCheckLambda = new lambda.Function(this, 'InitialCheckLambda', {
+    const initialCheckLambda = new lambda.Function(this, "InitialCheckLambda", {
       runtime: lambda.Runtime.PYTHON_3_9,
-      handler: 'initial_check_lambda.lambda_handler',  // Lambda handler function
-      code: lambda.Code.fromAsset('lambda/s3_pinecone_lambda'),  // Path to your Lambda code
+      handler: "initial_check_lambda.lambda_handler", // Lambda handler function
+      code: lambda.Code.fromAsset("lambda/s3_pinecone_lambda"), // Path to your Lambda code
       environment: {
         SOURCE_DESTINATION_EMBEDDING: process.env.SOURCE_DESTINATION_EMBEDDING!,
         CONNECTION_TABLE_NAME: connectionTable.tableName,
@@ -111,25 +116,33 @@ export class S3_Pinecone_CDK_Stack extends Stack {
       },
       role: lambdaExecutionRole,
     });
-    
 
-    const websocketApi = new apigatewayv2.WebSocketApi(this, 'WebSocketAPI', {
+    const websocketApi = new apigatewayv2.WebSocketApi(this, "WebSocketAPI", {
       connectRouteOptions: {
-        integration: new apigatewayv2integrations.WebSocketLambdaIntegration('ConnectLambdaIntegration', connectLambda),
+        integration: new apigatewayv2integrations.WebSocketLambdaIntegration(
+          "ConnectLambdaIntegration",
+          connectLambda
+        ),
       },
       disconnectRouteOptions: {
-        integration: new apigatewayv2integrations.WebSocketLambdaIntegration('DisconnectLambdaIntegration', disconnectLambda),
+        integration: new apigatewayv2integrations.WebSocketLambdaIntegration(
+          "DisconnectLambdaIntegration",
+          disconnectLambda
+        ),
       },
     });
 
-    websocketApi.addRoute('initialCheck', {
-      integration: new apigatewayv2integrations.WebSocketLambdaIntegration('InitialCheckLambdaIntegration', initialCheckLambda),
+    websocketApi.addRoute("initialCheck", {
+      integration: new apigatewayv2integrations.WebSocketLambdaIntegration(
+        "InitialCheckLambdaIntegration",
+        initialCheckLambda
+      ),
     });
 
-    const vectorCountLambda = new lambda.Function(this, 'VectorCountLambda', {
+    const vectorCountLambda = new lambda.Function(this, "VectorCountLambda", {
       runtime: lambda.Runtime.PYTHON_3_9,
-      handler: 'vector_count_pinecone_lambda.lambda_handler',
-      code: lambda.Code.fromAsset('lambda/s3_pinecone_lambda'),
+      handler: "vector_count_pinecone_lambda.lambda_handler",
+      code: lambda.Code.fromAsset("lambda/s3_pinecone_lambda"),
       environment: {
         PINECONE_API_KEY: process.env.PINECONE_API_KEY!,
         PINECONE_INDEX_NAME: process.env.PINECONE_INDEX_NAME!,
@@ -141,33 +154,33 @@ export class S3_Pinecone_CDK_Stack extends Stack {
     });
 
     const filterTerms = [
-      'ingest process finished in',
-      'Deleting vectors from database',
-      'Deleting File:',
-      'calling PartitionStep',
-      'calling ChunkStep',
-      'calling EmbedStep',
-      'writing a total of',
-      'MainProcess ERROR',
-      'Exception raised',
+      "ingest process finished in",
+      "Deleting vectors from database",
+      "Deleting File:",
+      "calling PartitionStep",
+      "calling ChunkStep",
+      "calling EmbedStep",
+      "writing a total of",
+      "MainProcess ERROR",
+      "Exception raised",
     ];
 
-    new logs.SubscriptionFilter(this, 'LogSubscriptionFilter', {
+    new logs.SubscriptionFilter(this, "LogSubscriptionFilter", {
       logGroup: centralLogGroup,
       destination: new destinations.LambdaDestination(vectorCountLambda),
       filterPattern: logs.FilterPattern.anyTerm(...filterTerms),
     });
-    
-    new apigatewayv2.WebSocketStage(this, 'WebSocketStage', {
+
+    new apigatewayv2.WebSocketStage(this, "WebSocketStage", {
       webSocketApi: websocketApi,
-      stageName: 'dev',
+      stageName: "dev",
       autoDeploy: true,
     });
 
-    const batchEventLambda = new lambda.Function(this, 'BatchEventLambda', {
+    const batchEventLambda = new lambda.Function(this, "BatchEventLambda", {
       runtime: lambda.Runtime.PYTHON_3_9,
-      handler: 'new_status_lambda.lambda_handler',
-      code: lambda.Code.fromAsset('lambda/websocket_utils_lambda'),
+      handler: "new_status_lambda.lambda_handler",
+      code: lambda.Code.fromAsset("lambda/websocket_utils_lambda"),
       environment: {
         CONNECTION_TABLE_NAME: connectionTable.tableName,
         CENTRAL_LOG_GROUP_NAME: centralLogGroup.logGroupName,
@@ -176,43 +189,58 @@ export class S3_Pinecone_CDK_Stack extends Stack {
       role: lambdaExecutionRole,
     });
 
-    new cdk.CfnOutput(this, 'WebSocketURL', {
+    new cdk.CfnOutput(this, "WebSocketURL", {
       value: `wss://${websocketApi.apiId}.execute-api.${this.region}.amazonaws.com/dev`,
-      description: 'WebSocket URL',
+      description: "WebSocket URL",
     });
 
-    vectorCountLambda.addEnvironment('WEBSOCKET_API_URL', `wss://${websocketApi.apiId}.execute-api.${this.region}.amazonaws.com/dev`);
-    batchEventLambda.addEnvironment('WEBSOCKET_API_URL', `wss://${websocketApi.apiId}.execute-api.${this.region}.amazonaws.com/dev`);
-    initialCheckLambda.addEnvironment('WEBSOCKET_API_URL', `wss://${websocketApi.apiId}.execute-api.${this.region}.amazonaws.com/dev`);
+    vectorCountLambda.addEnvironment(
+      "WEBSOCKET_API_URL",
+      `wss://${websocketApi.apiId}.execute-api.${this.region}.amazonaws.com/dev`
+    );
+    batchEventLambda.addEnvironment(
+      "WEBSOCKET_API_URL",
+      `wss://${websocketApi.apiId}.execute-api.${this.region}.amazonaws.com/dev`
+    );
+    initialCheckLambda.addEnvironment(
+      "WEBSOCKET_API_URL",
+      `wss://${websocketApi.apiId}.execute-api.${this.region}.amazonaws.com/dev`
+    );
 
-    const batchEventRule = new events.Rule(this, 'BatchEventRule', {
+    const batchEventRule = new events.Rule(this, "BatchEventRule", {
       eventPattern: {
-        source: ['aws.batch'],
-        detailType: ['Batch Job State Change'],
+        source: ["aws.batch"],
+        detailType: ["Batch Job State Change"],
         detail: {
-          status: ['SUBMITTED', 'STARTING', 'PENDING', 'RUNNING', 'SUCCEEDED', 'FAILED'],
+          status: [
+            "SUBMITTED",
+            "STARTING",
+            "PENDING",
+            "RUNNING",
+            "SUCCEEDED",
+            "FAILED",
+          ],
         },
       },
     });
 
     batchEventRule.addTarget(new targets.LambdaFunction(batchEventLambda));
 
-    batchEventLambda.addPermission('EventBridgeInvokePermission', {
-      principal: new iam.ServicePrincipal('events.amazonaws.com'),
-      action: 'lambda:InvokeFunction',
+    batchEventLambda.addPermission("EventBridgeInvokePermission", {
+      principal: new iam.ServicePrincipal("events.amazonaws.com"),
+      action: "lambda:InvokeFunction",
       sourceArn: batchEventRule.ruleArn,
     });
 
     lambdaExecutionRole.addToPolicy(
       new iam.PolicyStatement({
-        actions: [
-          "execute-api:ManageConnections"
-        ],
-        resources: [
-          `*`
-        ],
+        actions: ["execute-api:ManageConnections"],
+        resources: [`*`],
       })
     );
+
+    // Defining log groups for Rag Sandbox API Gateway
+    const logGroup = new logs.LogGroup(this, "ApiGatewayAccessLogs");
 
     // Define the S3 bucket (or reference an existing one)
     const bucket = s3.Bucket.fromBucketName(
@@ -258,10 +286,15 @@ export class S3_Pinecone_CDK_Stack extends Stack {
 
     batchServiceRole.addToPolicy(
       new iam.PolicyStatement({
-        actions: ["logs:DescribeLogGroups", "logs:DescribeLogStreams", "logs:CreateLogGroup", "logs:PutLogEvents"],
+        actions: [
+          "logs:DescribeLogGroups",
+          "logs:DescribeLogStreams",
+          "logs:CreateLogGroup",
+          "logs:PutLogEvents",
+        ],
         resources: [centralLogGroup.logGroupArn],
       })
-    );    
+    );
 
     // Define the execution role for Fargate Batch jobs
     const batchExecutionRole = new iam.Role(this, "BatchExecutionRole", {
@@ -278,7 +311,7 @@ export class S3_Pinecone_CDK_Stack extends Stack {
         actions: ["logs:CreateLogStream", "logs:PutLogEvents"],
         resources: [centralLogGroup.logGroupArn + ":*"],
       })
-    );    
+    );
 
     // Create a Batch Compute Environment with Fargate and ARM64 support
     const computeEnvironment = new batch.CfnComputeEnvironment(
@@ -310,8 +343,8 @@ export class S3_Pinecone_CDK_Stack extends Stack {
       ],
     });
 
-    batchEventLambda.addEnvironment('JOB_QUEUE', jobQueue.attrJobQueueArn);
-    initialCheckLambda.addEnvironment('JOB_QUEUE', jobQueue.attrJobQueueArn);
+    batchEventLambda.addEnvironment("JOB_QUEUE", jobQueue.attrJobQueueArn);
+    initialCheckLambda.addEnvironment("JOB_QUEUE", jobQueue.attrJobQueueArn);
 
     // Batch Job Definition with ARM64 architecture
     const jobDefinition = new batch.CfnJobDefinition(this, "MyBatchJobDef", {
@@ -331,8 +364,8 @@ export class S3_Pinecone_CDK_Stack extends Stack {
           options: {
             "awslogs-group": centralLogGroup.logGroupName,
             "awslogs-region": this.region,
-            "awslogs-stream-prefix": "batch-logs",  // Prefix for log streams
-            "awslogs-create-group": "true",  // Automatically create log group if it doesn't exist
+            "awslogs-stream-prefix": "batch-logs", // Prefix for log streams
+            "awslogs-create-group": "true", // Automatically create log group if it doesn't exist
           },
         },
         runtimePlatform: {
@@ -342,8 +375,6 @@ export class S3_Pinecone_CDK_Stack extends Stack {
       },
       platformCapabilities: ["FARGATE"],
     });
-
-    
 
     // Define the Lambda function for adding
     const addLambda = new lambda.Function(this, "AddLambdaFunction", {
@@ -358,13 +389,14 @@ export class S3_Pinecone_CDK_Stack extends Stack {
         MY_AWS_SECRET_ACCESS_KEY: process.env.MY_AWS_SECRET_ACCESS_KEY!,
         EMBEDDING_PROVIDER: process.env.EMBEDDING_PROVIDER!,
         EMBEDDING_MODEL_NAME: process.env.EMBEDDING_MODEL_NAME!,
-        EMBEDDING_PROVIDER_API_KEY: process.env.EMBEDDING_PROVIDER_API_KEY || '',
+        EMBEDDING_PROVIDER_API_KEY:
+          process.env.EMBEDDING_PROVIDER_API_KEY || "",
+        PINECONE_API_KEY: process.env.PINECONE_API_KEY!,
         CHUNKING_STRATEGY: process.env.CHUNKING_STRATEGY!,
         CHUNKING_MAX_CHARACTERS: process.env.CHUNKING_MAX_CHARACTERS!,
-        PINECONE_API_KEY: process.env.PINECONE_API_KEY!,
         PINECONE_INDEX_NAME: process.env.PINECONE_INDEX_NAME!,
         S3_BUCKET_NAME: process.env.S3_BUCKET_NAME!,
-        S3_NOTIFICATION_PREFIX: process.env.S3_NOTIFICATION_PREFIX || '',
+        S3_NOTIFICATION_PREFIX: process.env.S3_NOTIFICATION_PREFIX || "",
       },
       timeout: cdk.Duration.seconds(30),
     });
@@ -407,6 +439,33 @@ export class S3_Pinecone_CDK_Stack extends Stack {
       })
     );
 
+    const requestsLayer = new lambda.LayerVersion(this, "RequestsLayer", {
+      code: lambda.Code.fromAsset(
+        "lambda/prompt_lambda/lambda_layer/openai_pinecone_layer.zip"
+      ),
+      compatibleRuntimes: [lambda.Runtime.PYTHON_3_10],
+    });
+
+    // Define the Lambda function for handling OpenAI requests
+    const promptLambda = new lambda.Function(this, "PromptLambdaFunction", {
+      runtime: lambda.Runtime.PYTHON_3_10,
+      code: lambda.Code.fromAsset("lambda/prompt_lambda"),
+      handler: "prompt_handler.lambda_handler",
+      layers: [requestsLayer],
+      environment: {
+        OPENAI_API_KEY: process.env.EMBEDDING_PROVIDER_API_KEY!,
+        PINECONE_API_KEY: process.env.PINECONE_API_KEY!,
+        PINECONE_INDEX_NAME: process.env.PINECONE_INDEX_NAME!,
+        EMBEDDING_MODEL_NAME: process.env.EMBEDDING_MODEL_NAME!,
+      },
+      timeout: cdk.Duration.seconds(30),
+    });
+
+    // Grant API Gateway permissions to invoke the Lambda function
+    promptLambda.addPermission("APIGatewayInvokeLambda", {
+      principal: new iam.ServicePrincipal("apigateway.amazonaws.com"),
+    });
+
     // Grant necessary permissions to access S3 for the delete Lambda
     bucket.grantRead(deleteLambda);
 
@@ -447,6 +506,43 @@ export class S3_Pinecone_CDK_Stack extends Stack {
         new s3_notifications.LambdaDestination(deleteLambda)
       );
     }
+
+    // API Gateway to expose the RAG Sandobx Lambda function
+    const api = new apigateway.RestApi(this, "SandboxApi", {
+      restApiName: "Sandbox Service",
+      description:
+        "API Gateway with POST endpoint for embedding and querying OpenAI.",
+      deployOptions: {
+        accessLogDestination: new apigateway.LogGroupLogDestination(logGroup),
+        accessLogFormat: apigateway.AccessLogFormat.jsonWithStandardFields(),
+      },
+      defaultCorsPreflightOptions: {
+        allowOrigins: apigateway.Cors.ALL_ORIGINS, // or specify an array of allowed origins
+        allowMethods: apigateway.Cors.ALL_METHODS, // or specify methods like ['GET', 'POST']
+      },
+    });
+
+    // Define the /sandbox resource and POST method
+    const sandbox = api.root.addResource("sandbox");
+    const promptResource = sandbox.addResource("prompt");
+
+    // Integrate the prompt Lambda with the POST method on the /sandbox/prompt route
+    promptResource.addMethod(
+      "POST",
+      new apigateway.LambdaIntegration(promptLambda, {
+        requestTemplates: {
+          "application/json": `{
+            "statusCode": 200
+        }`,
+        },
+      })
+    );
+
+    // Output the API endpoint URL
+    new cdk.CfnOutput(this, "SandboxApiUrl", {
+      value: api.url,
+      exportName: "SandboxApiUrl",
+    });
 
     // Create a custom resource to invoke the Lambda function after deployment
     const provider = new custom_resources.Provider(this, "Provider", {
