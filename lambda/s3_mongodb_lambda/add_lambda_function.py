@@ -4,7 +4,11 @@ import boto3
 import botocore
 import uuid
 import urllib.parse
-from mongodb_utils import delete_from_mongodb
+from pymongo import MongoClient
+from dotenv import load_dotenv
+import time
+
+load_dotenv()
 
 # Initialize the Batch client and S3 client
 batch_client = boto3.client('batch')
@@ -13,6 +17,29 @@ s3_client = boto3.client('s3')
 # Read the app.py script from the Lambda's local file system
 with open('s3_mongodb_ingest.py', 'r') as script_file:
     app_script = script_file.read()
+
+
+def delete_from_mongodb(filename, uri, database_name, collection_name):
+    try:
+        # Connect to MongoDB
+        client = MongoClient(uri)
+        db = client[database_name]
+        collection = db[collection_name]
+
+        start_time = time.time()
+
+        # Delete documents with the specified filename in their metadata
+        result = collection.delete_many({"metadata.filename": filename})
+
+        end_time = time.time()
+        elapsed_time = end_time - start_time
+
+        # Output the result
+        print(f"Deleted {result.deleted_count} document(s) with filename '{filename}'.")
+        print(f"Time taken: {elapsed_time:.2f} seconds.")
+        
+    except Exception as e:
+        print(f"Error deleting from MongoDB: {e}")
     
 def lambda_handler(event, context):
     # Check if this is a delete event (ie. CDK delete)
