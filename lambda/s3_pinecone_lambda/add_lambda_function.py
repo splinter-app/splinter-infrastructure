@@ -6,7 +6,9 @@ import botocore
 import uuid
 import urllib.parse
 import time
-from pinecone_utils import delete_from_pinecone
+from pinecone import Pinecone
+
+
 
 # Initialize the Batch client and S3 client
 batch_client = boto3.client('batch')
@@ -41,6 +43,24 @@ def log_to_cloudwatch(message):
 # Read the app.py script from the Lambda's local file system
 with open('s3_pinecone_ingest.py', 'r') as script_file:
     app_script = script_file.read()
+
+def delete_from_pinecone(filename, api_key, index_name):
+    # Initialize Pinecone and connect to the index
+    pc = Pinecone(api_key=api_key)
+    index = pc.Index(index_name)
+
+    # Start timing the operation
+    start_time = time.time()
+
+    # Delete all vectors in the specified namespace
+    index.delete(delete_all=True, namespace=filename)
+
+    print(f"Deleted all vectors in the namespace '{filename}'.")
+
+    # End timing and calculate duration
+    end_time = time.time()
+    duration = end_time - start_time
+    print(f"Total delete process took {duration:.2f} seconds.")
     
 def lambda_handler(event, context):
     # Check if this is a delete event (ie. CDK delete)

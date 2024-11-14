@@ -103,10 +103,22 @@ export class S3_Pinecone_CDK_Stack extends Stack {
 
     connectionTable.grantReadWriteData(disconnectLambda);
 
+    const sharedLambdaLayer = new lambda.LayerVersion(
+      this,
+      "SharedLambdaLayer",
+      {
+        code: lambda.Code.fromAsset(
+          "lambda/s3_pinecone_lambda/lambda_layer/s3_pinecone_lambda_layer.zip"
+        ),
+        compatibleRuntimes: [lambda.Runtime.PYTHON_3_9],
+      }
+    );
+
     const initialCheckLambda = new lambda.Function(this, "InitialCheckLambda", {
       runtime: lambda.Runtime.PYTHON_3_9,
       handler: "initial_check_lambda.lambda_handler", // Lambda handler function
       code: lambda.Code.fromAsset("lambda/s3_pinecone_lambda"), // Path to your Lambda code
+      layers: [sharedLambdaLayer],
       environment: {
         SOURCE_DESTINATION_EMBEDDING: process.env.SOURCE_DESTINATION_EMBEDDING!,
         CONNECTION_TABLE_NAME: connectionTable.tableName,
@@ -143,6 +155,7 @@ export class S3_Pinecone_CDK_Stack extends Stack {
       runtime: lambda.Runtime.PYTHON_3_9,
       handler: "vector_count_pinecone_lambda.lambda_handler",
       code: lambda.Code.fromAsset("lambda/s3_pinecone_lambda"),
+      layers: [sharedLambdaLayer],
       environment: {
         PINECONE_API_KEY: process.env.PINECONE_API_KEY!,
         PINECONE_INDEX_NAME: process.env.PINECONE_INDEX_NAME!,
@@ -381,6 +394,7 @@ export class S3_Pinecone_CDK_Stack extends Stack {
       runtime: lambda.Runtime.PYTHON_3_9,
       code: lambda.Code.fromAsset("lambda/s3_pinecone_lambda"),
       handler: "add_lambda_function.lambda_handler",
+      layers: [sharedLambdaLayer],
       environment: {
         CENTRAL_LOG_GROUP_NAME: centralLogGroup.logGroupName,
         JOB_QUEUE: jobQueue.ref,
@@ -424,6 +438,7 @@ export class S3_Pinecone_CDK_Stack extends Stack {
       runtime: lambda.Runtime.PYTHON_3_9,
       handler: "delete_lambda_function.lambda_handler",
       code: lambda.Code.fromAsset("lambda/s3_pinecone_lambda"),
+      layers: [sharedLambdaLayer],
       environment: {
         CENTRAL_LOG_GROUP_NAME: centralLogGroup.logGroupName,
         PINECONE_API_KEY: process.env.PINECONE_API_KEY!,

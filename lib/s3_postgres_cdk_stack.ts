@@ -135,11 +135,23 @@ export class S3_Postgres_CDK_Stack extends Stack {
       )
     );
 
+    const sharedLambdaLayer = new lambda.LayerVersion(
+      this,
+      "SharedLambdaLayer",
+      {
+        code: lambda.Code.fromAsset(
+          "lambda/s3_postgres_lambda/lambda_layer/s3_postgres_lambda_layer.zip"
+        ),
+        compatibleRuntimes: [lambda.Runtime.PYTHON_3_9],
+      }
+    );
+
     // Define the Lambda function for adding
     const addLambda = new lambda.Function(this, "AddLambdaFunction", {
       runtime: lambda.Runtime.PYTHON_3_9,
       code: lambda.Code.fromAsset("lambda/s3_postgres_lambda"),
       handler: "add_lambda_function.lambda_handler",
+      layers: [sharedLambdaLayer],
       environment: {
         JOB_QUEUE: jobQueue.ref,
         JOB_DEFINITION: jobDefinition.ref,
@@ -186,6 +198,7 @@ export class S3_Postgres_CDK_Stack extends Stack {
       runtime: lambda.Runtime.PYTHON_3_9,
       handler: "delete_lambda_function.lambda_handler",
       code: lambda.Code.fromAsset("lambda/s3_postgres_lambda"),
+      layers: [sharedLambdaLayer],
       environment: {
         POSTGRES_DB_NAME: process.env.POSTGRES_DB_NAME!,
         POSTGRES_USER: process.env.POSTGRES_USER!,
