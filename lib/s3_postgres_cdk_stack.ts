@@ -161,8 +161,8 @@ export class S3_Postgres_CDK_Stack extends Stack {
         EMBEDDING_MODEL_NAME: process.env.EMBEDDING_MODEL_NAME!,
         EMBEDDING_PROVIDER_API_KEY:
           process.env.EMBEDDING_PROVIDER_API_KEY || "",
-        CHUNKING_STRATEGY: process.env.CHUNKING_STRATEGY!,
-        CHUNKING_MAX_CHARACTERS: process.env.CHUNKING_MAX_CHARACTERS!,
+        CHUNKING_STRATEGY: process.env.CHUNKING_STRATEGY || "",
+        CHUNKING_MAX_CHARACTERS: process.env.CHUNKING_MAX_CHARACTERS || "",
         POSTGRES_DB_NAME: process.env.POSTGRES_DB_NAME!,
         POSTGRES_USER: process.env.POSTGRES_USER!,
         POSTGRES_PASSWORD: process.env.POSTGRES_PASSWORD!,
