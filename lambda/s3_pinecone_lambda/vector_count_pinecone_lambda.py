@@ -33,8 +33,13 @@ LOG_PATTERNS = [
 ]
 
 def lambda_handler(event, context):
-    connection_id = get_connection_id_from_dynamodb()
     client_id = get_client_id_from_dynamodb()
+    
+    log_data, total_vectors, total_documents, vectors_written, documents_ingested = process_new_logs(event, client_id)
+
+    store_data_in_dynamodb(client_id, log_data)
+
+    connection_id = get_connection_id_from_dynamodb()
 
     if not connection_id:
         print("No connection ID found in DynamoDB.")
@@ -42,10 +47,6 @@ def lambda_handler(event, context):
             'statusCode': 404,
             'body': 'Connection ID not found'
         }
-    
-    log_data, total_vectors, total_documents, vectors_written, documents_ingested = process_new_logs(event, client_id)
-
-    store_data_in_dynamodb(client_id, log_data)
 
     send_to_websocket(connection_id, log_data, total_vectors, total_documents, vectors_written, documents_ingested)
 
@@ -88,38 +89,59 @@ def process_new_logs(event, client_id):
 
                 break
 
-    total_vectors = get_vector_count_from_pinecone()
-    total_documents= get_document_count_from_pinecone()
+    total_vectors, total_documents = get_counts_from_pinecone()
     vectors_written = get_ingestion_count_data(client_id, 'vectorsWritten')
     documents_ingested = get_ingestion_count_data(client_id, 'documentsIngested')
 
     return logs, total_vectors, total_documents, vectors_written, documents_ingested
 
-def get_vector_count_from_pinecone():
+def get_counts_from_pinecone(retries=3, delay=3):
     try:
-        print("Waiting 10 seconds to fetch from Pinecone")
-        time.sleep(10)
+        true_vector_count = None
+        true_document_count = None
 
-        stats = index.describe_index_stats()
-        vector_count = stats.get('total_vector_count', 0)
-        return vector_count
-    
+        vector_changed = False
+        document_changed = False
+
+        for attempt in range(retries):
+            print(f"Attempt {attempt + 1} to fetch vector and document counts from Pinecone...")
+            stats = index.describe_index_stats()
+
+            current_vector_count = stats.get('total_vector_count', 0)
+            current_document_count = len(stats.get('namespaces', {}))
+
+            if true_vector_count is None:
+                true_vector_count = current_vector_count
+                print(f"Setting initial vector count: {true_vector_count}")
+
+            if true_document_count is None:
+                true_document_count = current_document_count
+                print(f"Setting initial document count: {true_document_count}")
+
+            if current_vector_count != true_vector_count:
+                print(f"Vector count has changed: {true_vector_count} -> {current_vector_count}")
+                true_vector_count = current_vector_count
+                vector_changed = True
+
+            if current_document_count != true_document_count:
+                print(f"Document count has changed: {true_document_count} -> {current_document_count}")
+                true_document_count = current_document_count
+                document_changed = True
+
+            if vector_changed and document_changed:
+                print(f"Both counts have changed. Exiting retries early.")
+                return true_vector_count, true_document_count
+
+            if attempt < retries - 1:
+                print(f"Retrying in {delay} seconds...")
+                time.sleep(delay)
+
+        print(f"Final vector count: {true_vector_count}, document count: {true_document_count}")
+        return true_vector_count, true_document_count
+
     except Exception as e:
-        print(f"Error fetching vector count from Pinecone: {str(e)}")
-        return 0
-    
-def get_document_count_from_pinecone():
-    try:
-        print("Waiting 10 seconds to fetch from Pinecone")
-        time.sleep(10)
-        
-        stats = index.describe_index_stats()
-        namespaces = stats.get('namespaces', {})
-        return len(namespaces)
-    
-    except Exception as e:
-        print(f"Error fetching namespace/document count from Pinecone: {str(e)}")
-        return 0
+        print(f"Error fetching counts from Pinecone: {str(e)}")
+        return 0, 0
     
 def increment_document_count(client_id):
     try:
