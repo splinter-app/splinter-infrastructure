@@ -184,7 +184,23 @@ program
     });
   });
 
-program.parse(process.argv);
+program
+  .command("client")
+  .description("Run the Splinter UI")
+  .action(() => {
+    try {
+      console.log("Starting Splinter UI...");
+      execSync(
+        "cd client && node generateENV.js && npm run build && npm start",
+        {
+          stdio: "inherit",
+        }
+      );
+      console.log("Frontend client is now running in preview mode.");
+    } catch (error) {
+      console.error("Error starting Splinter UI", error);
+    }
+  });
 
 // Helper function to write answers to .env file
 function writeEnvFile(envObject: envType) {
@@ -198,3 +214,5 @@ function writeEnvFile(envObject: envType) {
     kleur.green(".env file created/updated with your configurations.")
   );
 }
+
+program.parse(process.argv);
