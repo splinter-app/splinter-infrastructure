@@ -164,7 +164,7 @@ program
   .action(() => {
     console.log(kleur.green("Starting Dropbox OAuth process..."));
 
-    const command = `source ../python-dropbox-oauth/venv/bin/activate && python3 ../python-dropbox-oauth/oauth.py`;
+    const command = `source ./python-dropbox-oauth/venv/bin/activate && pip install dropbox && python3 ./python-dropbox-oauth/oauth.py`;
 
     const pythonProcess = spawn(command, {
       stdio: "inherit", // Use "inherit" to allow Python to interact with the terminal directly
@@ -185,18 +185,44 @@ program
   });
 
 program
-  .command("client")
-  .description("Run the Splinter UI")
+  .command("client:build")
+  .description("Build the Splinter UI")
   .action(() => {
     try {
-      console.log("Starting Splinter UI...");
+      console.log("Building Splinter UI...");
       execSync(
-        "cd client && node generateENV.js && npm run build && npm start",
+        "cd client && npm install && clear && npx tsx generateENV.ts && npm run build",
         {
           stdio: "inherit",
         }
       );
-      console.log("Frontend client is now running in preview mode.");
+    } catch (error) {
+      console.error("Error starting Splinter UI", error);
+    }
+  });
+
+program
+  .command("client:run")
+  .description("Run the Splinter UI")
+  .action(() => {
+    try {
+      console.log("Starting Splinter UI...");
+      execSync("cd client && npm start", {
+        stdio: "inherit",
+      });
+    } catch (error) {
+      console.error("Error starting Splinter UI", error);
+    }
+  });
+program
+  .command("client")
+  .description("Builds and run the Splinter UI")
+  .action(() => {
+    try {
+      console.log("Starting Splinter UI...");
+      execSync("npm run splinter client:build && npm run splinter client:run", {
+        stdio: "inherit",
+      });
     } catch (error) {
       console.error("Error starting Splinter UI", error);
     }
