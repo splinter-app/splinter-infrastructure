@@ -392,8 +392,8 @@ export class S3_Pinecone_CDK_Stack extends Stack {
         EMBEDDING_PROVIDER_API_KEY:
           process.env.EMBEDDING_PROVIDER_API_KEY || "",
         PINECONE_API_KEY: process.env.PINECONE_API_KEY!,
-        CHUNKING_STRATEGY: process.env.CHUNKING_STRATEGY!,
-        CHUNKING_MAX_CHARACTERS: process.env.CHUNKING_MAX_CHARACTERS!,
+        CHUNKING_STRATEGY: process.env.CHUNKING_STRATEGY || "",
+        CHUNKING_MAX_CHARACTERS: process.env.CHUNKING_MAX_CHARACTERS || "",
         PINECONE_INDEX_NAME: process.env.PINECONE_INDEX_NAME!,
         S3_BUCKET_NAME: process.env.S3_BUCKET_NAME!,
         S3_NOTIFICATION_PREFIX: process.env.S3_NOTIFICATION_PREFIX || "",
@@ -512,10 +512,10 @@ export class S3_Pinecone_CDK_Stack extends Stack {
       restApiName: "Sandbox Service",
       description:
         "API Gateway with POST endpoint for embedding and querying OpenAI.",
-      deployOptions: {
-        accessLogDestination: new apigateway.LogGroupLogDestination(logGroup),
-        accessLogFormat: apigateway.AccessLogFormat.jsonWithStandardFields(),
-      },
+      // deployOptions: {
+      //   accessLogDestination: new apigateway.LogGroupLogDestination(logGroup),
+      //   accessLogFormat: apigateway.AccessLogFormat.jsonWithStandardFields(),
+      // },
       defaultCorsPreflightOptions: {
         allowOrigins: apigateway.Cors.ALL_ORIGINS, // or specify an array of allowed origins
         allowMethods: apigateway.Cors.ALL_METHODS, // or specify methods like ['GET', 'POST']
