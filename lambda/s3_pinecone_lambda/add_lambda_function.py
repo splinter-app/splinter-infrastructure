@@ -115,9 +115,6 @@ def lambda_handler(event, context):
         response = s3_client.list_objects_v2(Bucket=bucket_name, Prefix=prefix)
         
         if 'Contents' in response:
-            message = f"The objects I'm going to iterate through are: {response['Contents']}"
-            print(message)
-            log_to_cloudwatch(message)
             for item in response['Contents']:
                 document_key = item['Key']
                 s3_url = f"s3://{bucket_name}/{document_key}"

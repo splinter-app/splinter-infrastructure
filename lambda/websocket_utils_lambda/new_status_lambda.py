@@ -17,10 +17,6 @@ apigateway_management_api = boto3.client('apigatewaymanagementapi', endpoint_url
 
 def lambda_handler(event, context):
     connection_id = get_connection_id_from_dynamodb()
-    print(f"Connection ID: {connection_id}")
-
-    client_id = get_client_id_from_dynamodb()
-    print(f"Client ID: {client_id}")
 
     if not connection_id:
         print("No connection ID found for the client.")
