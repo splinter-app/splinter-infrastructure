@@ -30,11 +30,10 @@ export const useWebSocket = () => {
   const [isConnected, setIsConnected] = useState(false);
 
   useEffect(() => {
-    const websocketUrl = import.meta.env.VITE_WEBHOOK_URL; // Enter websocket url here from CDK deployment
+    const websocketUrl = import.meta.env.VITE_WEBHOOK_URL;
     const websocket = new WebSocket(websocketUrl);
 
     websocket.onopen = () => {
-      console.log('WebSocket connection established');
       setIsConnected(true);
 
       const initialMessage = {
@@ -45,11 +44,9 @@ export const useWebSocket = () => {
     };
 
     websocket.onmessage = (event) => {
-      console.log('Received WebSocket message:', event.data);
       try {
         const parsedData = JSON.parse(event.data);
         if (parsedData.type === 'initialCheckResponse') {
-          console.log('Initial connection data received');
           setData({
             logs: parsedData.logs || [],
             jobStatusCounts: parsedData.jobStatusCounts || {
@@ -124,7 +121,6 @@ export const useWebSocket = () => {
     };
 
     websocket.onclose = () => {
-      console.log('WebSocket connection closed');
       setIsConnected(false);
     };
 

@@ -69,9 +69,7 @@ def process_new_logs(event, client_id):
     for log_event in log_events:
         message = log_event.get('message')
         timestamp = log_event.get('timestamp')
-
-        print(f"---- LOG MESSAGE is: {message}----")
-        
+      
         for pattern in LOG_PATTERNS:
             if pattern in message:
                 logs.append({

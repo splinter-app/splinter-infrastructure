@@ -73,7 +73,7 @@ def lambda_handler(event, context):
         s3_url = f"s3://{bucket_name}/{decoded_document_with_spaces}"
 
         if does_object_exist(bucket_name, decoded_document_with_spaces):
-            print(f"Object {decoded_document_with_spaces} already exists. Running delete logic.")
+            print(f"Object {decoded_document_with_spaces} already exists. Deleting vectors from database.")
             # Retrieve the Postgres info from environment variables
             db_name = os.environ['POSTGRES_DB_NAME']
             user = os.environ['POSTGRES_USER']
@@ -98,7 +98,6 @@ def lambda_handler(event, context):
         response = s3_client.list_objects_v2(Bucket=bucket_name, Prefix=prefix)
         
         if 'Contents' in response:
-            print(f"The objects I'm going to iterate through are: {response['Contents']}")
             for item in response['Contents']:
                 document_key = item['Key']
                 s3_url = f"s3://{bucket_name}/{document_key}"
