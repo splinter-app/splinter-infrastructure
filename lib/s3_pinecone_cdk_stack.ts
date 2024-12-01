@@ -25,9 +25,15 @@ const COMPUTE_ENV_MAX_VCPU = 16;
 const CONTAINER_VCPU = "2";
 const CONTAINER_MEMORY = "4096";
 
+interface S3PineconeStackProps extends StackProps {
+  imageUri: string;
+}
+
 export class S3_Pinecone_CDK_Stack extends Stack {
-  constructor(scope: Construct, id: string, props?: StackProps) {
+  constructor(scope: Construct, id: string, props: S3PineconeStackProps) {
     super(scope, id, props);
+
+    const { imageUri } = props;
 
     const centralLogGroup = new logs.LogGroup(this, "CentralLogGroup", {
       removalPolicy: cdk.RemovalPolicy.DESTROY,
@@ -363,7 +369,7 @@ export class S3_Pinecone_CDK_Stack extends Stack {
     const jobDefinition = new batch.CfnJobDefinition(this, "MyBatchJobDef", {
       type: "container",
       containerProperties: {
-        image: "public.ecr.aws/q1n8b2k4/hcamacho/unstructured-demo:latest",
+        image: imageUri,
         resourceRequirements: [
           { type: "VCPU", value: CONTAINER_VCPU },
           { type: "MEMORY", value: CONTAINER_MEMORY },

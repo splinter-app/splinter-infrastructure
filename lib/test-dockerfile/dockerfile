@@ -1,0 +1,1 @@
+FROM public.ecr.aws/q1n8b2k4/hcamacho/unstructured-demo:latest

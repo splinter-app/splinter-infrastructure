@@ -32,6 +32,7 @@
     "@aws-cdk/aws-lambda": "^1.203.0",
     "@aws-cdk/aws-s3": "^1.203.0",
     "aws-cdk-lib": "^2.166.0",
+    "cdk-ecr-deployment": "^3.0.140",
     "commander": "^12.1.0",
     "constructs": "^10.4.2",
     "dotenv": "^16.4.5",
