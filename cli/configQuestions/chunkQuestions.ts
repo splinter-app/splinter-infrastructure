@@ -17,16 +17,29 @@ export async function askChunkQuestions(envObject: envType) {
     },
   ]);
 
-  const dict = {
+  const chunkingStrategy = {
     Basic: "basic",
     "By Title": "by_title",
     "By Page": "by_page",
     "By Similarity": "by_similarity",
   };
 
+  const chunkingMaxChars = {
+    "500": 500,
+    "1000": 1000,
+    "1500": 1500,
+    "2000": 2000,
+  };
+
   Object.assign(envObject, {
-    chunking_strategy: dict[chunkSettings.chunkStrategy as keyof typeof dict],
-    chunking_max_characters: chunkSettings.chunkSize,
+    chunking_strategy:
+      chunkingStrategy[
+        chunkSettings.chunkStrategy as keyof typeof chunkingStrategy
+      ],
+    chunking_max_characters:
+      chunkingMaxChars[
+        chunkSettings.chunkSize as keyof typeof chunkingMaxChars
+      ],
   });
 
   return chunkSettings;

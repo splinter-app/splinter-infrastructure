@@ -14,10 +14,6 @@ import * as logs from "aws-cdk-lib/aws-logs";
 
 dotenv.config();
 
-const COMPUTE_ENV_MAX_VCPU = 16;
-const CONTAINER_VCPU = "2";
-const CONTAINER_MEMORY = "4096";
-
 export class Dropbox_MongoDB_CDK_Stack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
@@ -75,7 +71,7 @@ export class Dropbox_MongoDB_CDK_Stack extends cdk.Stack {
         type: "MANAGED",
         computeResources: {
           type: "FARGATE",
-          maxvCpus: COMPUTE_ENV_MAX_VCPU,
+          maxvCpus: Number(process.env.COMPUTE_ENV_VCPU),
           subnets: vpc.privateSubnets.map((subnet) => subnet.subnetId),
           securityGroupIds: [
             new ec2.SecurityGroup(this, "BatchSecurityGroup", { vpc })
@@ -103,8 +99,8 @@ export class Dropbox_MongoDB_CDK_Stack extends cdk.Stack {
       containerProperties: {
         image: "public.ecr.aws/q1n8b2k4/hcamacho/unstructured-demo:latest",
         resourceRequirements: [
-          { type: "VCPU", value: CONTAINER_VCPU },
-          { type: "MEMORY", value: CONTAINER_MEMORY },
+          { type: "VCPU", value: process.env.CONTAINER_VCPU },
+          { type: "MEMORY", value: process.env.CONTAINER_MEMORY },
         ],
         jobRoleArn: new iam.Role(this, "BatchJobRole", {
           assumedBy: new iam.ServicePrincipal("ecs-tasks.amazonaws.com"),
