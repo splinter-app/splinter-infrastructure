@@ -14,6 +14,8 @@ import { askChunkQuestions } from "./configQuestions/chunkQuestions";
 import { envType } from "./configQuestions/envType";
 import { askInitialIngestion } from "./configQuestions/initialIngestionQuestions";
 
+import { askComputeContainerQuestions } from "./configQuestions/computeEnvContainerQuestions";
+
 // Read and display the logo
 
 function displayWelcome() {
@@ -51,6 +53,7 @@ program
     displayWelcome();
     let envObject = {} as envType;
     const source = await askSourceQuestions(envObject);
+    const computeEnvContainer = await askComputeContainerQuestions(envObject);
     const destination = await askDestinationQuestions(envObject);
     const embedding = await askEmbeddingQuestions(envObject);
 
@@ -68,6 +71,7 @@ program
     const initialIngestion = await askInitialIngestion(envObject);
 
     const fullConfig = {
+      ...computeEnvContainer,
       ...source,
       ...destination,
       ...embedding,
@@ -128,17 +132,8 @@ program
       {
         type: "list",
         name: "stackToDestroy",
-        message: "Select the stack you wish to destroy:",
-        choices: [
-          "S3PineconeCDKStack",
-          "S3MongoDBCDKStack",
-          "S3PostgresCDKStack",
-          "DropboxPineconeCDKStack",
-          "DropboxMongoDBCDKStack",
-          "DropboxPostgresCDKStack",
-          new inquirer.Separator(),
-          "Cancel",
-        ],
+        message: "Would you like to destroy your current Splinter cdk stack?",
+        choices: ["Continue", new inquirer.Separator(), "Cancel"],
       },
     ]);
 
@@ -148,10 +143,9 @@ program
     }
 
     try {
-      execSync(
-        `npx cdk destroy ${stackToDestroy} --require-approval never --force`,
-        { stdio: "inherit" }
-      );
+      execSync(`npx cdk destroy --require-approval never --force`, {
+        stdio: "inherit",
+      });
     } catch (error) {
       console.error("Destruction failed:", error);
       process.exit(1);
