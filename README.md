@@ -2,7 +2,7 @@
 
 This repository contains the automated deployment process for Splinter, an open-source pipeline designed to simplify the processing of unstructured data and its integration into modern knowledge bases.
 
-To learn more about Splinter, visit our [website](https://splinter.com/) and [case study](https://splinter.com/case_study).
+To learn more about Splinter, visit our [website](https://splinter-app.github.io/) and [case study](https://splinter-app.github.io/case-study/).
 
 ## Infrastructure Overview
 
