@@ -14,7 +14,7 @@ import * as logs from "aws-cdk-lib/aws-logs";
 
 dotenv.config();
 
-export class Dropbox_Pinecone_CDK_Stack extends cdk.Stack {
+export class Dropbox_MongoDB_CDK_Stack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
 
@@ -124,7 +124,7 @@ export class Dropbox_Pinecone_CDK_Stack extends cdk.Stack {
     // Setting up LambdaLayer for the Webhook Lambda
     const requestsLayer = new lambda.LayerVersion(this, "RequestsLayer", {
       code: lambda.Code.fromAsset(
-        "lambda/dropbox_pinecone_lambda/lambda_layer/requests_layer.zip"
+        "src/lambda/dropbox_mongodb_lambda/lambda_layer/requests_layer.zip"
       ),
       compatibleRuntimes: [lambda.Runtime.PYTHON_3_9],
     });
@@ -143,7 +143,7 @@ export class Dropbox_Pinecone_CDK_Stack extends cdk.Stack {
     // Lambda function to handle webhook requests
     const webhookLambda = new lambda.Function(this, "WebhookHandlerLambda", {
       runtime: lambda.Runtime.PYTHON_3_9,
-      code: lambda.Code.fromAsset("lambda/dropbox_pinecone_lambda"),
+      code: lambda.Code.fromAsset("src/lambda/dropbox_mongodb_lambda"),
       handler: "webhook_handler.handler",
       layers: [requestsLayer],
       environment: {
@@ -153,14 +153,15 @@ export class Dropbox_Pinecone_CDK_Stack extends cdk.Stack {
         DROPBOX_APP_KEY: process.env.DROPBOX_APP_KEY!,
         DROPBOX_APP_SECRET: process.env.DROPBOX_APP_SECRET!,
         DROPBOX_REMOTE_URL: process.env.DROPBOX_REMOTE_URL!,
-        PINECONE_API_KEY: process.env.PINECONE_API_KEY!,
-        PINECONE_INDEX_NAME: process.env.PINECONE_INDEX_NAME!,
         CHUNKING_STRATEGY: process.env.CHUNKING_STRATEGY!,
         CHUNKING_MAX_CHARACTERS: process.env.CHUNKING_MAX_CHARACTERS!,
         EMBEDDING_MODEL_NAME: process.env.EMBEDDING_MODEL_NAME!,
         EMBEDDING_PROVIDER: process.env.EMBEDDING_PROVIDER!,
         EMBEDDING_PROVIDER_API_KEY:
           process.env.EMBEDDING_PROVIDER_API_KEY || "",
+        MONGODB_URI: process.env.MONGODB_URI!,
+        MONGODB_DATABASE: process.env.MONGODB_DATABASE!,
+        MONGODB_COLLECTION: process.env.MONGODB_COLLECTION!,
         DYNAMODB_TABLE_NAME: tokenTable.tableName,
       },
       timeout: cdk.Duration.seconds(30),

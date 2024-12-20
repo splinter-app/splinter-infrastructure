@@ -78,7 +78,7 @@ export class S3_Pinecone_CDK_Stack extends Stack {
     const connectLambda = new lambda.Function(this, "ConnectLambda", {
       runtime: lambda.Runtime.PYTHON_3_9,
       handler: "connect_lambda.lambda_handler",
-      code: lambda.Code.fromAsset("lambda/websocket_utils_lambda"),
+      code: lambda.Code.fromAsset("src/lambda/websocket_utils_lambda"),
       environment: {
         CONNECTION_TABLE_NAME: connectionTable.tableName,
       },
@@ -90,7 +90,7 @@ export class S3_Pinecone_CDK_Stack extends Stack {
     const disconnectLambda = new lambda.Function(this, "DisconnectLambda", {
       runtime: lambda.Runtime.PYTHON_3_9,
       handler: "disconnect_lambda.lambda_handler",
-      code: lambda.Code.fromAsset("lambda/websocket_utils_lambda"),
+      code: lambda.Code.fromAsset("src/lambda/websocket_utils_lambda"),
       environment: {
         CONNECTION_TABLE_NAME: connectionTable.tableName,
       },
@@ -104,7 +104,7 @@ export class S3_Pinecone_CDK_Stack extends Stack {
       "SharedLambdaLayer",
       {
         code: lambda.Code.fromAsset(
-          "lambda/s3_pinecone_lambda/lambda_layer/s3_pinecone_lambda_layer.zip"
+          "src/lambda/s3_pinecone_lambda/lambda_layer/s3_pinecone_lambda_layer.zip"
         ),
         compatibleRuntimes: [lambda.Runtime.PYTHON_3_9],
       }
@@ -113,7 +113,7 @@ export class S3_Pinecone_CDK_Stack extends Stack {
     const initialCheckLambda = new lambda.Function(this, "InitialCheckLambda", {
       runtime: lambda.Runtime.PYTHON_3_9,
       handler: "initial_check_lambda.lambda_handler", // Lambda handler function
-      code: lambda.Code.fromAsset("lambda/s3_pinecone_lambda"), // Path to your Lambda code
+      code: lambda.Code.fromAsset("src/lambda/s3_pinecone_lambda"), // Path to your Lambda code
       layers: [sharedLambdaLayer],
       environment: {
         SOURCE_DESTINATION_EMBEDDING: process.env.SOURCE_DESTINATION_EMBEDDING!,
@@ -150,7 +150,7 @@ export class S3_Pinecone_CDK_Stack extends Stack {
     const vectorCountLambda = new lambda.Function(this, "VectorCountLambda", {
       runtime: lambda.Runtime.PYTHON_3_9,
       handler: "vector_count_pinecone_lambda.lambda_handler",
-      code: lambda.Code.fromAsset("lambda/s3_pinecone_lambda"),
+      code: lambda.Code.fromAsset("src/lambda/s3_pinecone_lambda"),
       layers: [sharedLambdaLayer],
       environment: {
         PINECONE_API_KEY: process.env.PINECONE_API_KEY!,
@@ -189,7 +189,7 @@ export class S3_Pinecone_CDK_Stack extends Stack {
     const batchEventLambda = new lambda.Function(this, "BatchEventLambda", {
       runtime: lambda.Runtime.PYTHON_3_9,
       handler: "new_status_lambda.lambda_handler",
-      code: lambda.Code.fromAsset("lambda/websocket_utils_lambda"),
+      code: lambda.Code.fromAsset("src/lambda/websocket_utils_lambda"),
       environment: {
         CONNECTION_TABLE_NAME: connectionTable.tableName,
         CENTRAL_LOG_GROUP_NAME: centralLogGroup.logGroupName,
@@ -388,7 +388,7 @@ export class S3_Pinecone_CDK_Stack extends Stack {
     // Define the Lambda function for adding
     const addLambda = new lambda.Function(this, "AddLambdaFunction", {
       runtime: lambda.Runtime.PYTHON_3_9,
-      code: lambda.Code.fromAsset("lambda/s3_pinecone_lambda"),
+      code: lambda.Code.fromAsset("src/lambda/s3_pinecone_lambda"),
       handler: "add_lambda_function.lambda_handler",
       layers: [sharedLambdaLayer],
       environment: {
@@ -433,7 +433,7 @@ export class S3_Pinecone_CDK_Stack extends Stack {
     const deleteLambda = new lambda.Function(this, "DeleteLambdaFunction", {
       runtime: lambda.Runtime.PYTHON_3_9,
       handler: "delete_lambda_function.lambda_handler",
-      code: lambda.Code.fromAsset("lambda/s3_pinecone_lambda"),
+      code: lambda.Code.fromAsset("src/lambda/s3_pinecone_lambda"),
       layers: [sharedLambdaLayer],
       environment: {
         CENTRAL_LOG_GROUP_NAME: centralLogGroup.logGroupName,
@@ -452,7 +452,7 @@ export class S3_Pinecone_CDK_Stack extends Stack {
 
     const requestsLayer = new lambda.LayerVersion(this, "RequestsLayer", {
       code: lambda.Code.fromAsset(
-        "lambda/prompt_lambda/lambda_layer/openai_pinecone_layer.zip"
+        "src/lambda/prompt_lambda/lambda_layer/openai_pinecone_layer.zip"
       ),
       compatibleRuntimes: [lambda.Runtime.PYTHON_3_10],
     });
@@ -460,7 +460,7 @@ export class S3_Pinecone_CDK_Stack extends Stack {
     // Define the Lambda function for handling OpenAI requests
     const promptLambda = new lambda.Function(this, "PromptLambdaFunction", {
       runtime: lambda.Runtime.PYTHON_3_10,
-      code: lambda.Code.fromAsset("lambda/prompt_lambda"),
+      code: lambda.Code.fromAsset("src/lambda/prompt_lambda"),
       handler: "prompt_handler.lambda_handler",
       layers: [requestsLayer],
       environment: {
