@@ -158,7 +158,7 @@ program
   .action(() => {
     console.log(kleur.green("Starting Dropbox OAuth process..."));
 
-    const command = `source ./python-dropbox-oauth/venv/bin/activate && pip install dropbox && python3 ./python-dropbox-oauth/oauth.py`;
+    const command = `source ./src/python-dropbox-oauth/venv/bin/activate && pip install dropbox && python3 ./python-dropbox-oauth/oauth.py`;
 
     const pythonProcess = spawn(command, {
       stdio: "inherit", // Use "inherit" to allow Python to interact with the terminal directly

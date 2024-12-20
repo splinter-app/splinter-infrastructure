@@ -10,7 +10,7 @@ Splinter deploys the following key components in your AWS account:
 
 <p align="center">
   <img 
-    src="./diagrams/architecture-detailed.png"
+    src="https://github.com/splinter-app/splinter-app.github.io/blob/ed84e71ce4c740230aaf2e9d65d00d64c5ff36f5/public/images/architecture/architecture-detailed.png"
     alt="splinter_infrastructure"
   >
 </p>

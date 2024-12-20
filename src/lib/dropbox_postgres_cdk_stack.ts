@@ -1,28 +1,22 @@
+// lib/webhook_lambda_cdk-stack.ts
+
 import * as cdk from "aws-cdk-lib";
-import { Stack, StackProps } from "aws-cdk-lib";
-import * as s3 from "aws-cdk-lib/aws-s3";
+import { Construct } from "constructs";
 import * as lambda from "aws-cdk-lib/aws-lambda";
-import * as s3_notifications from "aws-cdk-lib/aws-s3-notifications";
+import * as apigateway from "aws-cdk-lib/aws-apigateway";
+import * as dynamodb from "aws-cdk-lib/aws-dynamodb";
 import * as batch from "aws-cdk-lib/aws-batch";
 import * as ec2 from "aws-cdk-lib/aws-ec2";
-import * as iam from "aws-cdk-lib/aws-iam";
-import * as logs from "aws-cdk-lib/aws-logs";
 import * as custom_resources from "aws-cdk-lib/custom-resources";
+import * as iam from "aws-cdk-lib/aws-iam";
 import * as dotenv from "dotenv";
-import { Construct } from "constructs";
+import * as logs from "aws-cdk-lib/aws-logs";
 
 dotenv.config();
 
-export class S3_Postgres_CDK_Stack extends Stack {
-  constructor(scope: Construct, id: string, props?: StackProps) {
+export class Dropbox_Postgres_CDK_Stack extends cdk.Stack {
+  constructor(scope: Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
-
-    // Define the S3 bucket (or reference an existing one)
-    const bucket = s3.Bucket.fromBucketName(
-      this,
-      "MyExistingBucket",
-      process.env.S3_BUCKET_NAME!
-    );
 
     // Create the VPC
     const vpc = new ec2.Vpc(this, "MyVpc", {
@@ -39,6 +33,15 @@ export class S3_Postgres_CDK_Stack extends Stack {
         ),
       ],
     });
+
+    // Create an Instance Profile for the Batch Instance Role
+    const batchInstanceProfile = new iam.CfnInstanceProfile(
+      this,
+      "BatchInstanceProfile",
+      {
+        roles: [batchInstanceRole.roleName],
+      }
+    );
 
     // Create Batch Service Role
     const batchServiceRole = new iam.Role(this, "BatchServiceRole", {
@@ -111,6 +114,21 @@ export class S3_Postgres_CDK_Stack extends Stack {
       platformCapabilities: ["FARGATE"],
     });
 
+    // Setting up DynamoDB
+    const tokenTable = new dynamodb.Table(this, "TokenTable", {
+      partitionKey: { name: "TokenID", type: dynamodb.AttributeType.STRING },
+      billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
+      removalPolicy: cdk.RemovalPolicy.DESTROY,
+    });
+
+    // Setting up LambdaLayer for the Webhook Lambda
+    const requestsLayer = new lambda.LayerVersion(this, "RequestsLayer", {
+      code: lambda.Code.fromAsset(
+        "src/lambda/dropbox_postgres_lambda/lambda_layer/requests_layer.zip"
+      ),
+      compatibleRuntimes: [lambda.Runtime.PYTHON_3_9],
+    });
+
     // Create a role for the Lambda functions
     const lambdaExecutionRole = new iam.Role(this, "LambdaExecutionRole", {
       assumedBy: new iam.ServicePrincipal("lambda.amazonaws.com"),
@@ -122,136 +140,111 @@ export class S3_Postgres_CDK_Stack extends Stack {
       )
     );
 
-    const sharedLambdaLayer = new lambda.LayerVersion(
-      this,
-      "SharedLambdaLayer",
-      {
-        code: lambda.Code.fromAsset(
-          "lambda/s3_postgres_lambda/lambda_layer/s3_postgres_lambda_layer.zip"
-        ),
-        compatibleRuntimes: [lambda.Runtime.PYTHON_3_9],
-      }
-    );
-
-    // Define the Lambda function for adding
-    const addLambda = new lambda.Function(this, "AddLambdaFunction", {
+    // Lambda function to handle webhook requests
+    const webhookLambda = new lambda.Function(this, "WebhookHandlerLambda", {
       runtime: lambda.Runtime.PYTHON_3_9,
-      code: lambda.Code.fromAsset("lambda/s3_postgres_lambda"),
-      handler: "add_lambda_function.lambda_handler",
-      layers: [sharedLambdaLayer],
+      code: lambda.Code.fromAsset("src/lambda/dropbox_postgres_lambda"),
+      handler: "webhook_handler.handler",
+      layers: [requestsLayer],
       environment: {
         JOB_QUEUE: jobQueue.ref,
         JOB_DEFINITION: jobDefinition.ref,
-        MY_AWS_ACCESS_KEY_ID: process.env.MY_AWS_ACCESS_KEY_ID!,
-        MY_AWS_SECRET_ACCESS_KEY: process.env.MY_AWS_SECRET_ACCESS_KEY!,
-        EMBEDDING_PROVIDER: process.env.EMBEDDING_PROVIDER!,
-        EMBEDDING_MODEL_NAME: process.env.EMBEDDING_MODEL_NAME!,
-        EMBEDDING_PROVIDER_API_KEY:
-          process.env.EMBEDDING_PROVIDER_API_KEY || "",
-        CHUNKING_STRATEGY: process.env.CHUNKING_STRATEGY || "",
-        CHUNKING_MAX_CHARACTERS: process.env.CHUNKING_MAX_CHARACTERS || "",
+        DROPBOX_REFRESH_TOKEN: process.env.DROPBOX_REFRESH_TOKEN!,
+        DROPBOX_APP_KEY: process.env.DROPBOX_APP_KEY!,
+        DROPBOX_APP_SECRET: process.env.DROPBOX_APP_SECRET!,
+        DROPBOX_REMOTE_URL: process.env.DROPBOX_REMOTE_URL!,
         POSTGRES_DB_NAME: process.env.POSTGRES_DB_NAME!,
         POSTGRES_USER: process.env.POSTGRES_USER!,
         POSTGRES_PASSWORD: process.env.POSTGRES_PASSWORD!,
         POSTGRES_HOST: process.env.POSTGRES_HOST!,
         POSTGRES_PORT: process.env.POSTGRES_PORT!,
         POSTGRES_TABLE_NAME: process.env.POSTGRES_TABLE_NAME!,
-        S3_BUCKET_NAME: process.env.S3_BUCKET_NAME!,
-        S3_NOTIFICATION_PREFIX: process.env.S3_NOTIFICATION_PREFIX || "",
+        CHUNKING_STRATEGY: process.env.CHUNKING_STRATEGY!,
+        CHUNKING_MAX_CHARACTERS: process.env.CHUNKING_MAX_CHARACTERS!,
+        EMBEDDING_MODEL_NAME: process.env.EMBEDDING_MODEL_NAME!,
+        EMBEDDING_PROVIDER: process.env.EMBEDDING_PROVIDER!,
+        EMBEDDING_PROVIDER_API_KEY:
+          process.env.EMBEDDING_PROVIDER_API_KEY || "",
+        DYNAMODB_TABLE_NAME: tokenTable.tableName,
       },
       timeout: cdk.Duration.seconds(30),
     });
 
     // Grant permissions for the add Lambda to submit jobs to AWS Batch
-    addLambda.addToRolePolicy(
+    webhookLambda.addToRolePolicy(
       new iam.PolicyStatement({
         actions: ["batch:SubmitJob"],
         resources: [jobQueue.ref, jobDefinition.ref],
       })
     );
 
-    // Grant necessary permissions to access S3
-    bucket.grantRead(addLambda);
+    // grant lambda function permission to read and write to the database.
+    tokenTable.grantReadWriteData(webhookLambda);
 
-    // Add permissions for S3 to invoke addLambda
-    addLambda.addPermission("S3InvokeAddLambda", {
-      principal: new iam.ServicePrincipal("s3.amazonaws.com"),
-      action: "lambda:InvokeFunction",
-      sourceArn: bucket.bucketArn,
-    });
-
-    // Define the Lambda function for handling S3 object deletion
-    const deleteLambda = new lambda.Function(this, "DeleteLambdaFunction", {
-      runtime: lambda.Runtime.PYTHON_3_9,
-      handler: "delete_lambda_function.lambda_handler",
-      code: lambda.Code.fromAsset("lambda/s3_postgres_lambda"),
-      layers: [sharedLambdaLayer],
-      environment: {
-        POSTGRES_DB_NAME: process.env.POSTGRES_DB_NAME!,
-        POSTGRES_USER: process.env.POSTGRES_USER!,
-        POSTGRES_PASSWORD: process.env.POSTGRES_PASSWORD!,
-        POSTGRES_HOST: process.env.POSTGRES_HOST!,
-        POSTGRES_PORT: process.env.POSTGRES_PORT!,
-        POSTGRES_TABLE_NAME: process.env.POSTGRES_TABLE_NAME!,
-      },
-      timeout: cdk.Duration.seconds(30),
-    });
-
-    deleteLambda.addToRolePolicy(
+    // Add specific permissions for DynamoDB access
+    webhookLambda.addToRolePolicy(
       new iam.PolicyStatement({
-        actions: ["batch:SubmitJob"],
-        resources: [jobQueue.ref],
+        actions: [
+          "dynamodb:GetItem",
+          "dynamodb:PutItem",
+          "dynamodb:UpdateItem",
+        ],
+        resources: [tokenTable.tableArn],
       })
     );
 
-    // Grant necessary permissions to access S3 for the delete Lambda
-    bucket.grantRead(deleteLambda);
+    // Grant CloudWatch logging permissions to the Lambda function
+    webhookLambda.addToRolePolicy(
+      new iam.PolicyStatement({
+        actions: [
+          "logs:CreateLogGroup",
+          "logs:CreateLogStream",
+          "logs:PutLogEvents",
+        ],
+        resources: ["*"],
+      })
+    );
 
-    // Add permissions for S3 to invoke deleteLambda
-    deleteLambda.addPermission("S3InvokeDeleteLambda", {
-      principal: new iam.ServicePrincipal("s3.amazonaws.com"),
-      action: "lambda:InvokeFunction",
-      sourceArn: bucket.bucketArn,
+    // setting up log groups for API Gateway
+    const logGroup = new logs.LogGroup(this, "ApiGatewayAccessLogs");
+
+    // API Gateway to expose the Lambda function
+    const api = new apigateway.RestApi(this, "WebhookApi", {
+      restApiName: "Webhook Service",
+      description: "API Gateway with POST endpoint for Dropbox webhook.",
+      deployOptions: {
+        accessLogDestination: new apigateway.LogGroupLogDestination(logGroup),
+        accessLogFormat: apigateway.AccessLogFormat.jsonWithStandardFields(),
+      },
     });
 
-    // Check if the environment variable for prefix is defined
-    if (process.env.S3_NOTIFICATION_PREFIX) {
-      const notificationOptions: s3.NotificationKeyFilter = {
-        prefix: process.env.S3_NOTIFICATION_PREFIX,
-      };
+    // Create /webhook resource and add POST method
+    const webhookResource = api.root.addResource("webhook");
+    webhookResource.addMethod(
+      "POST",
+      new apigateway.LambdaIntegration(webhookLambda)
+    );
+    webhookResource.addMethod(
+      "GET",
+      new apigateway.LambdaIntegration(webhookLambda)
+    );
 
-      // Add event notifications with the prefix
-      bucket.addEventNotification(
-        s3.EventType.OBJECT_CREATED,
-        new s3_notifications.LambdaDestination(addLambda),
-        notificationOptions
-      );
+    webhookResource.addCorsPreflight({
+      allowOrigins: apigateway.Cors.ALL_ORIGINS,
+      allowMethods: ["OPTIONS", "POST", "GET"],
+    });
 
-      bucket.addEventNotification(
-        s3.EventType.OBJECT_REMOVED,
-        new s3_notifications.LambdaDestination(deleteLambda),
-        notificationOptions
-      );
-    } else {
-      // Add event notifications without any additional options
-      bucket.addEventNotification(
-        s3.EventType.OBJECT_CREATED,
-        new s3_notifications.LambdaDestination(addLambda)
-      );
-
-      bucket.addEventNotification(
-        s3.EventType.OBJECT_REMOVED,
-        new s3_notifications.LambdaDestination(deleteLambda)
-      );
-    }
+    new apigateway.Deployment(this, "WebhookApiDeployment", {
+      api,
+    });
 
     if (process.env.INITIAL_INGESTION === "true") {
       // Create a custom resource to invoke the Lambda function after deployment
       const provider = new custom_resources.Provider(this, "Provider", {
-        onEventHandler: addLambda, // Pass your existing Lambda function here
+        onEventHandler: webhookLambda, // Pass your existing Lambda function here
       });
 
-      // Trigger the Lambda for initial S3 bucket processing
+      // Trigger the Lambda for initial dropbox processing
       const customResource = new cdk.CustomResource(
         this,
         "InvokeLambdaAfterDeploy",
@@ -260,7 +253,7 @@ export class S3_Postgres_CDK_Stack extends Stack {
         }
       );
 
-      customResource.node.addDependency(bucket);
+      customResource.node.addDependency(api);
     }
   }
 }
